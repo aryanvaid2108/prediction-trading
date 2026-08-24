@@ -1,0 +1,8 @@
+---- launchd fire 2026-08-24T06:17:04Z ----
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/aryan/Documents/GitHub/kalshi-weather/scripts/run_daily.py", line 24, in <module>
+    def record_station(led: paper.Ledger, icao: str, target: date):
+                                                             ^^^^
+NameError: name 'date' is not defined

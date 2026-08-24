@@ -9,9 +9,14 @@ Usage: python -m scripts.run_daily [ICAO ...]   (default: KNYC)
 import sys
 import traceback
 from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
 
 from wx import kalshi, paper, pipeline, trading
 from wx.stations import get
+
+# Target the US market date regardless of the host machine's timezone. At midday
+# ET the Central-time stations share the same calendar date, so one date is safe.
+MARKET_TZ = ZoneInfo("America/New_York")
 
 BANKROLL = 1000.0
 
@@ -40,7 +45,7 @@ def record_station(led: paper.Ledger, icao: str, target: date):
 def main(*icaos):
     icaos = icaos or ["KNYC", "KMDW", "KAUS"]
     stamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    target = date.today()
+    target = datetime.now(MARKET_TZ).date()
     print(f"\n=== run_daily {stamp} target={target} stations={list(icaos)} ===")
 
     led = paper.Ledger()
