@@ -34,7 +34,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Settle + record tick
-        run: python -m scripts.run_daily KNYC KMDW KAUS
+        run: python -m scripts.run_daily   # defaults to the active station list
 
       - name: Update dashboard
         run: python -m scripts.dashboard   # writes DASHBOARD.md + the Actions run summary

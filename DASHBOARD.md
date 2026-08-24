@@ -1,6 +1,6 @@
 # 📈 Paper-trading dashboard
 
-_Updated 2026-08-24 08:23 UTC · bankroll $1000 · stations KNYC · KMDW · KAUS · no live orders placed_
+_Updated 2026-08-24 12:47 UTC · bankroll $1000 · stations KNYC · KMDW · KAUS · KLAX · KSFO · no live orders placed_
 
 | Realized P&L | ROI (on stake) | Win rate | Closed | Open | Open stake |
 |---:|---:|---:|---:|---:|---:|

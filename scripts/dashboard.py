@@ -8,7 +8,7 @@ Usage: python -m scripts.dashboard
 import os
 from datetime import datetime, timezone
 
-from wx import paper
+from wx import paper, stations
 
 BANKROLL = 1000.0
 
@@ -35,8 +35,8 @@ def build(led: paper.Ledger) -> str:
 
     L = []
     L.append("# 📈 Paper-trading dashboard\n")
-    L.append(f"_Updated {now} · bankroll ${BANKROLL:.0f} · stations KNYC · KMDW · KAUS · "
-             "no live orders placed_\n")
+    L.append(f"_Updated {now} · bankroll ${BANKROLL:.0f} · stations "
+             f"{' · '.join(stations.ACTIVE)} · no live orders placed_\n")
 
     L.append("| Realized P&L | ROI (on stake) | Win rate | Closed | Open | Open stake |")
     L.append("|---:|---:|---:|---:|---:|---:|")

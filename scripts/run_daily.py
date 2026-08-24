@@ -15,12 +15,12 @@ import traceback
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-from wx import kalshi, paper, pipeline, trading
+from wx import kalshi, paper, pipeline, stations, trading
 from wx.stations import get
 
 BANKROLL = 1000.0
 MAX_TOTAL_FRAC = 0.25            # cap on cumulative daily stake per station
-DEFAULT_STATIONS = ["KNYC", "KMDW", "KAUS"]
+DEFAULT_STATIONS = stations.ACTIVE
 MARKET_TZ = ZoneInfo("America/New_York")
 WINDOW_ET = (10, 16)            # record only 10:00-15:59 ET (intraday-active, sharp)
 WATCH_INTERVAL_MIN = 30

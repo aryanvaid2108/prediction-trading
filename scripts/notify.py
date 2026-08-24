@@ -2,9 +2,9 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from wx import paper
+from wx import paper, stations
 
-STATIONS = ["KNYC", "KMDW", "KAUS"]
+STATIONS = stations.ACTIVE
 
 
 def line() -> str:
