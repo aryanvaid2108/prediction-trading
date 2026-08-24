@@ -6,3 +6,4 @@ __pycache__/
 .cache/gefs.json
 .cache/*.log
 # keep .cache/paper_ledger.json committed so the cloud loop persists state
+.cache/candles.json

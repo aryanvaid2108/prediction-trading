@@ -62,6 +62,23 @@ def markets(series: str, day: date, session=None, timeout: int = 30, retries: in
     raise last
 
 
+def candlesticks(series: str, ticker: str, start_ts: int, end_ts: int,
+                 interval: int = 60, session=None, timeout: int = 30):
+    """Historical OHLC candles for a market (yes_bid/yes_ask/price per interval)."""
+    sess = session or _session()
+    for _ in range(3):
+        try:
+            r = sess.get(f"{BASE}/series/{series}/markets/{ticker}/candlesticks",
+                         params={"start_ts": start_ts, "end_ts": end_ts, "period_interval": interval},
+                         timeout=timeout)
+            if r.status_code >= 400:
+                return []
+            return r.json().get("candlesticks", [])
+        except requests.RequestException:
+            time.sleep(0.4)
+    return []
+
+
 @dataclass
 class OrderResult:
     dry_run: bool
