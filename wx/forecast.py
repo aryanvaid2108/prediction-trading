@@ -15,6 +15,11 @@ MODELS = "gfs025,ecmwf_ifs025"
 # Backtest ensemble: independent operational models, archived for years. Their
 # spread stands in for ensemble spread in a multi-model EMOS.
 ARCHIVE_MODELS = "gfs_seamless,ecmwf_ifs025,icon_seamless,gem_seamless,jma_seamless,meteofrance_seamless"
+# NBM is NOAA's calibrated multi-model blend — add it as an extra predictor to test
+# whether it beats our home-brew blend. Toggle with WITH_NBM=1 (kept off in the live
+# loop until validated).
+if __import__("os").environ.get("WITH_NBM"):
+    ARCHIVE_MODELS += ",ncep_nbm_conus"
 
 
 def _parse_members(hourly: dict) -> pd.DataFrame:
