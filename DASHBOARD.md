@@ -1,17 +1,17 @@
 # 📈 Paper-trading dashboard
 
-_Updated 2026-08-24 17:47 UTC · bankroll $1000 · stations KNYC · KMDW · KAUS · KLAX · KSFO · no live orders placed_
+_Updated 2026-08-24 19:22 UTC · bankroll $1000 · stations KNYC · KMDW · KAUS · KLAX · KSFO · no live orders placed_
 
 | Realized P&L | ROI (on stake) | Win rate | Closed | Open | Open stake |
 |---:|---:|---:|---:|---:|---:|
-| **$+0.00** | **—** | **—** | 0 | 12 | $714 |
+| **$+0.00** | **—** | **—** | 0 | 13 | $726 |
 
 ### By station
 
 | Station | Positions | Open | Closed | Realized P&L |
 |:--|--:|--:|--:|--:|
 | KAUS | 3 | 3 | 0 | $+0.00 |
-| KNYC | 4 | 4 | 0 | $+0.00 |
+| KNYC | 5 | 5 | 0 | $+0.00 |
 | KSFO | 5 | 5 | 0 | $+0.00 |
 
 ### Open positions
@@ -25,6 +25,7 @@ _Updated 2026-08-24 17:47 UTC · bankroll $1000 · stations KNYC · KMDW · KAUS
 | KNYC | 2026-08-24 | 78–79° | YES | $0.39 | 249 | maker |
 | KNYC | 2026-08-24 | ≤77° | YES | $0.02 | 608 | maker |
 | KNYC | 2026-08-24 | 82–83° | NO | $0.94 | 33 | maker |
+| KNYC | 2026-08-24 | 80–81° | YES | $0.41 | 28 | maker |
 | KSFO | 2026-08-24 | 71–72° | YES | $0.40 | 159 | maker |
 | KSFO | 2026-08-24 | 69–70° | YES | $0.11 | 134 | maker |
 | KSFO | 2026-08-24 | ≤68° | NO | $0.92 | 107 | maker |

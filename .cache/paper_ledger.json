@@ -154,5 +154,18 @@
     "maker": true,
     "realized": null,
     "pnl": null
+  },
+  {
+    "ticker": "KXHIGHNY-26AUG24-B80.5",
+    "icao": "KNYC",
+    "target": "2026-08-24",
+    "side": "yes",
+    "lo": 80.0,
+    "hi": 81.0,
+    "price": 0.41,
+    "count": 28,
+    "maker": true,
+    "realized": null,
+    "pnl": null
   }
 ]
