@@ -117,6 +117,14 @@ def test_floored_predictive_kills_stale_tail():
     assert floored(80, None) > 0.99
 
 
+def test_afd_sigma_factor():
+    from wx import afd
+    low = afd.AfdSignal(temp_confidence="low", lean="cooler", risks=["cold front"], rationale="x")
+    hi = afd.AfdSignal(temp_confidence="high", lean="neutral", risks=[], rationale="x")
+    assert afd.sigma_factor(low) == 1.4      # widen on low confidence
+    assert afd.sigma_factor(hi) == 1.0       # no change on high confidence
+
+
 def test_maker_price_joins_or_improves():
     assert trading.maker_price({"yes_bid": 0.37, "yes_ask": 0.38}, "yes") == 0.37  # 1c spread: join
     assert trading.maker_price({"yes_bid": 0.50, "yes_ask": 0.53}, "yes") == 0.51  # wide: improve

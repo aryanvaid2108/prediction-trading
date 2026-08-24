@@ -5,6 +5,8 @@ from datetime import date, datetime, timedelta, timezone
 
 import numpy as np
 
+import dataclasses
+
 import pandas as pd
 
 from . import cli, emos, intraday, obs, trading
@@ -121,3 +123,23 @@ def quote_live(st: Station, target: date = None, now_utc: datetime = None,
     s_b = float(np.sqrt(1.0 / (w0 + wi)))
     prob_fn = trading.floored_gaussian_prob(mu_b, s_b, observed_max)
     return LiveQuote(mu_b, s_b, prob_fn, observed_max, hour_lst, mu0, s0, calib, intraday_active=True)
+
+
+def widen_for_afd(q: LiveQuote, st: Station, target: date) -> LiveQuote:
+    """Widen a quote's sigma per the AFD confidence signal, rebuilding prob_fn.
+
+    Only inflates uncertainty (never shifts the mean); on any failure returns the
+    quote unchanged so the loop never breaks on an LLM/API hiccup.
+    """
+    from . import afd
+    try:
+        signal = afd.parse_afd(afd.fetch_afd(st.wfo), st.name, target)
+        factor = afd.sigma_factor(signal)
+    except Exception:
+        return q
+    if factor <= 1.0:
+        return q
+    s = q.sigma * factor
+    prob_fn = (trading.floored_gaussian_prob(q.mu, s, q.observed_max)
+               if q.observed_max is not None else trading.gaussian_prob(q.mu, s))
+    return dataclasses.replace(q, sigma=s, prob_fn=prob_fn)
