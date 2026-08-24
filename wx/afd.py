@@ -56,9 +56,12 @@ def parse_afd(text: str, station_name: str, target: date,
         max_tokens=1024,
         system=("You are a meteorologist reading an NWS Area Forecast Discussion. "
                 "Assess only the DAILY HIGH TEMPERATURE for the named station and date. "
-                "Confidence is 'low' when the discussion flags timing uncertainty, model "
-                "disagreement, marine-layer/cloud/convection risk, or a front near the "
-                "peak-heating window; 'high' when it reads as routine and settled."),
+                "Confidence is 'low' ONLY when the forecaster EXPLICITLY adjusts the high "
+                "away from model/blended guidance — e.g. 'lowered/raised highs from the "
+                "blend', 'went below/above guidance', 'nudged highs down'. Merely mentioning "
+                "possible showers, clouds, or a front is NOT enough — it must be an explicit "
+                "temperature override. Otherwise confidence is 'high'. This high-precision "
+                "signal avoids false alarms on routine convection days."),
         messages=[{"role": "user", "content":
                    f"Station: {station_name}\nTarget day: {target:%A %Y-%m-%d}\n\n"
                    f"Area Forecast Discussion:\n{text[:8000]}"}],

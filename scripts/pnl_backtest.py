@@ -12,6 +12,7 @@ conservative-vs-intraday, comparison).
 Usage: python -m scripts.pnl_backtest [start] [end] [ICAO ...]
 """
 import json
+import os
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -54,6 +55,11 @@ def price_at(series, ticker, day):
     return _cache[key]
 
 
+AFD_PATH = Path(__file__).resolve().parent.parent / ".cache" / "afd_signals.json"
+AFD = json.loads(AFD_PATH.read_text()) if (AFD_PATH.exists() and os.environ.get("AFD")) else {}
+AFD_WIDEN = float(os.environ.get("AFD_WIDEN", "1.4"))
+
+
 def run_station(ic, start, end):
     st = stations.get(ic)
     table, cols = backtest.build_archive_table_wide(st, start, end)
@@ -61,7 +67,8 @@ def run_station(ic, start, end):
     rows = []
     for _, r in scored.iterrows():
         day = r["day"].date()
-        prob = trading.gaussian_prob(r["mu"], r["sigma"])
+        sigma = r["sigma"] * (AFD_WIDEN if AFD.get(day.isoformat()) else 1.0)  # widen on AFD override
+        prob = trading.gaussian_prob(r["mu"], sigma)
         try:
             ms = kalshi.markets(st.kalshi, day, session=SESSION)
         except Exception:
