@@ -33,13 +33,16 @@ jobs:
       - name: Settle + record tick
         run: python -m scripts.run_daily KNYC KMDW KAUS
 
-      - name: Commit ledger if changed
+      - name: Update dashboard
+        run: python -m scripts.dashboard   # writes DASHBOARD.md + the Actions run summary
+
+      - name: Commit ledger + dashboard if changed
         run: |
           git config user.name "kalshi-weather-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .cache/paper_ledger.json
+          git add .cache/paper_ledger.json DASHBOARD.md
           if git diff --cached --quiet; then
-            echo "no ledger change this tick"
+            echo "no change this tick"
           else
             git commit -m "paper tick $(date -u +'%F %H:%MZ')"
             git push

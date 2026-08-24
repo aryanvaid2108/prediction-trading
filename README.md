@@ -1,4 +1,7 @@
-# kalshi-weather
+# prediction-trading — kalshi-weather
+
+**📈 [Live paper-trading dashboard →](DASHBOARD.md)** (auto-updated every tick by the loop)
+
 
 A calibrated daily-high-temperature model for Kalshi weather markets. It turns
 multi-model weather forecasts into a probability distribution over the settling
