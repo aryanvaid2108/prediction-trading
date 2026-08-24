@@ -4,10 +4,13 @@ name: paper-loop
 # summer (EDT). run_daily only records inside the 10:00-16:00 ET window and
 # settles finished days always, so off-window fires are harmless.
 on:
+  # Times are off the top-of-hour on purpose: GitHub delays :00 crons most under
+  # load. Delays of a few minutes are normal and fine (weather is slow); the
+  # 10:00-16:00 ET window guard absorbs them.
   schedule:
     - cron: "30 14 * * *"   # ~10:30 ET  first in-window read
-    - cron: "0 17 * * *"    # ~13:00 ET  tightening
-    - cron: "0 19 * * *"    # ~15:00 ET  sharpest, near the edge peak
+    - cron: "10 17 * * *"   # ~13:10 ET  tightening
+    - cron: "40 18 * * *"   # ~14:40 ET  sharpest, near the edge peak
   workflow_dispatch: {}      # allow manual runs from the Actions tab
 
 permissions:
