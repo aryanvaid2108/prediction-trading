@@ -52,6 +52,15 @@ class Ledger:
         """True if this station/day was already recorded (keeps the daily job idempotent)."""
         return any(f.icao == icao and f.target == target for f in self.fills)
 
+    def held_markets(self, icao: str, target: str) -> set:
+        """(ticker, side) already held for a station/day — so intraday ticks don't
+        re-enter the same bucket as the distribution sharpens through the day."""
+        return {(f.ticker, f.side) for f in self.fills if f.icao == icao and f.target == target}
+
+    def staked_on(self, icao: str, target: str) -> float:
+        """Cumulative dollars staked on a station/day, to cap exposure across ticks."""
+        return sum(f.count * f.price for f in self.fills if f.icao == icao and f.target == target)
+
     def save(self):
         self.path.parent.mkdir(exist_ok=True)
         self.path.write_text(json.dumps([asdict(f) for f in self.fills], indent=2))

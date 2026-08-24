@@ -126,27 +126,31 @@ def decide(market: dict, prob_fn, bankroll: float,
     return best
 
 
-def plan(markets, prob_fn, bankroll: float, max_total_frac: float = 0.25, **kw):
-    """Decisions across an event's markets, most valuable first.
+def decisions_for(markets, prob_fn, bankroll: float, **kw):
+    """One best decision per market (unsorted, uncapped)."""
+    return [d for d in (decide(m, prob_fn, bankroll, **kw) for m in markets) if d]
 
-    Calibration (sigma inflation, intraday floor) lives in the prob_fn now; the
-    remaining portfolio-level control here is max_total_frac, capping aggregate
-    stake as a fraction of bankroll.
-    """
-    out = [d for d in (decide(m, prob_fn, bankroll, **kw) for m in markets) if d]
-    out.sort(key=lambda d: d.ev, reverse=True)
 
-    budget = max_total_frac * bankroll
-    spent, kept = 0.0, []
-    for d in out:
+def cap_exposure(decisions, budget_dollars: float):
+    """Keep the highest-EV decisions that fit a dollar budget, scaling the last."""
+    kept, spent = [], 0.0
+    for d in sorted(decisions, key=lambda d: d.ev, reverse=True):
         cost = d.count * d.price
-        if spent + cost > budget:
-            scale = max(0.0, budget - spent) / d.price
-            d.count = int(scale)
+        if spent + cost > budget_dollars:
+            d.count = int(max(0.0, budget_dollars - spent) / d.price)
             if d.count < 1:
                 continue
-            d.ev = d.edge_net * d.count
-            cost = d.count * d.price
+            d.ev, cost = d.edge_net * d.count, d.count * d.price
         kept.append(d)
         spent += cost
     return kept
+
+
+def plan(markets, prob_fn, bankroll: float, max_total_frac: float = 0.25, **kw):
+    """Decisions across an event's markets, capped at max_total_frac of bankroll.
+
+    Calibration (sigma inflation, intraday floor) lives in the prob_fn; the
+    portfolio control here is the aggregate exposure cap.
+    """
+    return cap_exposure(decisions_for(markets, prob_fn, bankroll, **kw),
+                        max_total_frac * bankroll)

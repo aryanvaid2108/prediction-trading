@@ -123,6 +123,21 @@ def test_maker_price_joins_or_improves():
     assert trading.maker_price({"no_bid": None, "no_ask": 0.9}, "no") is None
 
 
+def test_cap_exposure_and_dedup():
+    d = lambda tk, ev, price, count: trading.Decision(tk, "yes", price, count, 0.6, 0.05, ev)
+    decs = [d("A", 30, 0.50, 100), d("B", 20, 0.50, 100), d("C", 10, 0.50, 100)]
+    kept = trading.cap_exposure(decs, budget_dollars=75)   # room for 1.5 positions
+    assert sum(x.count * x.price for x in kept) <= 75 + 1e-9
+    assert kept[0].ticker == "A"                            # highest EV kept first
+
+    led = paper.Ledger(path="/tmp/kw_test_ledger.json")
+    led.fills = []
+    led.add(paper.Fill("A", "KNYC", "2025-07-15", "yes", 78, 79, 0.40, 50))
+    assert led.held_markets("KNYC", "2025-07-15") == {("A", "yes")}
+    assert led.staked_on("KNYC", "2025-07-15") == 20.0
+    assert led.held_markets("KNYC", "2025-07-16") == set()
+
+
 def test_settle_pnl():
     yes = paper.Fill("T", "KNYC", "2025-07-15", "yes", 78, 79, 0.40, 10, maker=True)
     assert paper.settle_pnl(yes, 78) == 6.0    # in bucket, win: 10*(1-0.4)
