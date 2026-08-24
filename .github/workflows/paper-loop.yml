@@ -1,0 +1,46 @@
+name: paper-loop
+
+# Three intraday ticks a day. Crons are UTC; the times below are ET during
+# summer (EDT). run_daily only records inside the 10:00-16:00 ET window and
+# settles finished days always, so off-window fires are harmless.
+on:
+  schedule:
+    - cron: "30 14 * * *"   # ~10:30 ET  first in-window read
+    - cron: "0 17 * * *"    # ~13:00 ET  tightening
+    - cron: "0 19 * * *"    # ~15:00 ET  sharpest, near the edge peak
+  workflow_dispatch: {}      # allow manual runs from the Actions tab
+
+permissions:
+  contents: write            # so the job can commit the ledger back
+
+concurrency:
+  group: paper-loop
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Settle + record tick
+        run: python -m scripts.run_daily KNYC KMDW KAUS
+
+      - name: Commit ledger if changed
+        run: |
+          git config user.name "kalshi-weather-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .cache/paper_ledger.json
+          if git diff --cached --quiet; then
+            echo "no ledger change this tick"
+          else
+            git commit -m "paper tick $(date -u +'%F %H:%MZ')"
+            git push
+          fi
