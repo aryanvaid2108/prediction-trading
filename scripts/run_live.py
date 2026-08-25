@@ -121,16 +121,20 @@ def place(plan, target, led):
 
 
 def reconcile():
-    """Rebuild live_ledger.json from ACTUAL Kalshi positions (ground truth)."""
-    pos = kalshi.positions()
-    live = [p for p in pos if p.get("position")]
-    print(f"reconcile: {len(live)} open positions on Kalshi")
-    for p in live:
+    """Print ACTUAL Kalshi state — filled positions + resting orders (ground truth)."""
+    pos = [p for p in kalshi.positions() if p.get("position")]
+    print(f"positions (filled): {len(pos)}")
+    for p in pos:
         print(f"  {p.get('ticker')}  position={p.get('position')}  "
               f"exposure=${(p.get('market_exposure') or 0)/100:.2f}  "
               f"realized=${(p.get('realized_pnl') or 0)/100:.2f}")
-    # NOTE: automated ticker->bucket mapping for the ledger lands once field shapes
-    # are confirmed against a real position; for now this prints the truth to verify.
+    resting = kalshi.orders(status="resting")
+    print(f"\nresting orders (unfilled): {len(resting)}")
+    for o in resting:
+        print(f"  {o.get('ticker'):24} {str(o.get('outcome_side')).upper():3} "
+              f"book={o.get('book_side'):4} rem={o.get('remaining_count_fp')} "
+              f"filled={o.get('fill_count_fp')} "
+              f"yes=${o.get('yes_price_dollars')} no=${o.get('no_price_dollars')}")
 
 
 def main(*args):

@@ -126,6 +126,18 @@ def positions(session=None, timeout: int = 30) -> list:
     return r.json().get("market_positions", [])
 
 
+def orders(status: str = None, session=None, timeout: int = 30) -> list:
+    """Signed, READ-ONLY list of orders. status in {resting, canceled, executed}.
+    V2 fields: outcome_side (yes/no), book_side (bid/ask), status,
+    remaining_count_fp / fill_count_fp, yes_price_dollars / no_price_dollars."""
+    s = session or _session()
+    params = {"status": status} if status else {}
+    r = s.get(f"{BASE}/portfolio/orders", params=params,
+              headers=_signed_headers("GET", "/trade-api/v2/portfolio/orders"), timeout=timeout)
+    r.raise_for_status()
+    return r.json().get("orders", [])
+
+
 @dataclass
 class OrderResult:
     dry_run: bool
