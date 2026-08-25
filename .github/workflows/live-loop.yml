@@ -1,14 +1,17 @@
 name: live-loop
 
-# AUTONOMOUS REAL-MONEY TRADING. Fires once a day at the morning tick (sharpest
-# edge) and places the model's live orders. Safe to fire repeatedly: run_live is
-# idempotent (won't re-buy a held bucket) and capped ($750 total / 25% per station
-# per day), and it refuses to place outside the 10:00-16:00 ET window.
+# AUTONOMOUS REAL-MONEY TRADING. Three intraday ticks a day: each re-quotes with
+# fresher observations and adds any NEW edge the sharper forecast reveals. Safe to
+# fire repeatedly: run_live is idempotent (won't re-buy a held bucket) and capped
+# ($750 total / 25% per station per day), so later ticks are purely additive within
+# budget. Refuses to place outside the 10:00-16:00 ET window.
 #
 # Kill switch: disable this workflow in the Actions tab (top-right "..." > Disable).
 on:
   schedule:
-    - cron: "30 14 * * *"   # ~10:30 ET / 8:00pm IST — morning tick
+    - cron: "30 14 * * *"   # ~10:30 ET / 8:00pm IST  — morning, biggest edge
+    - cron: "10 17 * * *"   # ~13:10 ET / 10:40pm IST — tightening
+    - cron: "40 18 * * *"   # ~14:40 ET / 12:10am IST — sharpest, near edge peak
   workflow_dispatch: {}
 
 permissions:
