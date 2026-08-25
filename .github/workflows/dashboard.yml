@@ -16,7 +16,7 @@ on:
   schedule:
     - cron: "*/30 14-23 * * *"   # every 30 min, ~10:00-19:30 ET (trading day)
   workflow_run:
-    workflows: ["paper-loop"]     # redeploy right after each trade tick
+    workflows: ["paper-loop", "live-loop"]   # redeploy right after each trade tick
     types: [completed]
   workflow_dispatch: {}
 

@@ -47,17 +47,24 @@ class Order:
     maker: bool
 
 
-def build_plan(icaos, target, now_utc):
-    """The full model order set, per-station-capped then total-capped."""
+def build_plan(icaos, target, now_utc, led):
+    """The full model order set — ledger-aware so repeated runs never double-buy a
+    held bucket or stake past the per-station / total caps for the day."""
+    key = target.isoformat()
     plan = []
     for icao in icaos:
         try:
             st = get(icao)
+            held = led.held_markets(st.icao, key)                     # skip what we already hold
+            station_left = PER_STATION_FRAC * BANKROLL - led.staked_on(st.icao, key)
+            if station_left < 1:
+                continue
             q = pipeline.quote_live(st, target, now_utc=now_utc)
             ms = kalshi.markets(st.kalshi, target)
             by = {m["ticker"]: m for m in ms}
-            decs = trading.decisions_for(ms, q.prob_fn, BANKROLL, min_edge=MIN_EDGE, kelly_frac=KELLY)
-            for d in trading.cap_exposure(decs, PER_STATION_FRAC * BANKROLL):
+            fresh = [d for d in trading.decisions_for(ms, q.prob_fn, BANKROLL, min_edge=MIN_EDGE, kelly_frac=KELLY)
+                     if (d.ticker, d.side) not in held]
+            for d in trading.cap_exposure(fresh, station_left):
                 m = by[d.ticker]
                 lo, hi = trading.market_bounds(m["strike_type"], m.get("floor"), m.get("cap"))
                 mk = trading.maker_price(m, d.side)
@@ -65,11 +72,12 @@ def build_plan(icaos, target, now_utc):
                 plan.append(Order(icao, d.ticker, d.side, lo, hi, price, d.count, maker))
         except Exception:
             print(f"  {icao}: ERROR\n{traceback.format_exc()}")
-    # global cap across all stations: keep in order until the combined budget is spent
+    # global cap across all stations, net of what is already staked live today
+    total_left = MAX_TOTAL_STAKE - sum(f.count * f.price for f in led.fills if f.target == key)
     kept, spent = [], 0.0
     for o in plan:
         stake = o.count * o.price
-        if spent + stake > MAX_TOTAL_STAKE:
+        if spent + stake > total_left:
             continue
         kept.append(o); spent += stake
     return kept, spent
@@ -92,8 +100,7 @@ def preview(plan, spent):
     print("\nPREVIEW ONLY — no orders placed. Set LIVE=1 to submit these for real.")
 
 
-def place(plan, target):
-    led = paper.Ledger(LIVE_LEDGER)
+def place(plan, target, led):
     key = target.isoformat()
     session = kalshi._session()
     placed = 0
@@ -137,13 +144,20 @@ def main(*args):
     inwin = WINDOW_ET[0] <= now_et.hour < WINDOW_ET[1]
     print(f"run_live {now_utc.isoformat(timespec='seconds')} ({now_et:%H:%M} ET, "
           f"{'in' if inwin else 'OUT OF'} window) target={target} mode={'LIVE' if live else 'PREVIEW'}")
+
+    led = paper.Ledger(LIVE_LEDGER)
+    if live and not inwin:
+        # scheduled at the morning tick; a delayed cron firing off-window should NOT
+        # place real orders unattended. Manual dispatch can still preview any time.
+        print("outside 10:00-16:00 ET window — skipping live placement (safety)."); return
     if not inwin:
-        print("WARNING: outside the 10:00-16:00 ET window — edges are weaker; plan shown anyway.")
-    plan, spent = build_plan(icaos, target, now_utc)
+        print("WARNING: outside the window — preview only; edges are weaker.")
+
+    plan, spent = build_plan(icaos, target, now_utc, led)
     if not plan:
-        print("no qualifying edges right now — nothing to do."); return
+        print("no qualifying edges (or caps already reached) — nothing to do."); return
     if live:
-        place(plan, target)
+        place(plan, target, led)
     else:
         preview(plan, spent)
 
