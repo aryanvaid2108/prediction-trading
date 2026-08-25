@@ -12,6 +12,10 @@ on:
         type: choice
         options: [preview, live, reconcile]
         default: preview
+      max_orders:
+        description: "cap number of orders (blank = all; use 1 to smoke-test)"
+        type: string
+        default: ""
 
 permissions:
   contents: write        # to commit live_ledger.json after a live run
@@ -41,6 +45,7 @@ jobs:
           KALSHI_ACCESS_KEY: ${{ secrets.KALSHI_ACCESS_KEY }}
           KALSHI_PRIVATE_KEY_PATH: /tmp/kalshi.pem
           LIVE: ${{ inputs.mode == 'live' && '1' || '0' }}
+          LIVE_MAX_ORDERS: ${{ inputs.max_orders }}
         run: |
           if [ "${{ inputs.mode }}" = "reconcile" ]; then
             python -m scripts.run_live reconcile

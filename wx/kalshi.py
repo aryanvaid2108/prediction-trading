@@ -6,6 +6,7 @@ the environment — this module never sends an order on its own.
 """
 import os
 import time
+import uuid
 from dataclasses import dataclass
 from datetime import date
 
@@ -132,28 +133,38 @@ class OrderResult:
     response: dict = None
 
 
-def place_order(ticker: str, side: str, count: int, price: float,
-                order_type: str = "limit", live: bool = False,
-                session=None, timeout: int = 30) -> OrderResult:
-    """Build (and, only if live=True + creds present, send) a maker limit order.
+_ORDERS_PATH = "/trade-api/v2/portfolio/events/orders"
 
-    Defaults to dry-run: returns the payload without contacting Kalshi. Live mode
-    requires KALSHI_ACCESS_KEY and KALSHI_PRIVATE_KEY_PATH (RSA-PSS signing) and an
-    explicit live=True from the caller.
+
+def place_order(ticker: str, side: str, count: int, price: float,
+                live: bool = False, session=None, timeout: int = 30,
+                time_in_force: str = "good_till_canceled") -> OrderResult:
+    """Build (and, only if live=True + creds present, send) a limit order via the
+    Kalshi V2 order API (POST /portfolio/events/orders).
+
+    Our (side, price) is in yes/no + our-side-price terms; V2 quotes everything
+    from the YES book: our YES -> bid at our price; our NO -> ask at 1 - price
+    (selling YES is economically buying NO at 1 - price). Fields are strings.
+    Defaults to dry-run: returns the payload without contacting Kalshi.
     """
+    if side == "yes":
+        v2_side, v2_price = "bid", price
+    else:
+        v2_side, v2_price = "ask", round(1.0 - price, 2)
     payload = {
         "ticker": ticker,
-        "action": "buy",
-        "side": side,
-        "count": int(count),
-        "type": order_type,
-        f"{side}_price": int(round(price * 100)),  # cents
-        "client_order_id": f"kw-{ticker}-{side}",
+        "side": v2_side,
+        "count": str(int(count)),
+        "price": f"{v2_price:.2f}",
+        "time_in_force": time_in_force,
+        "self_trade_prevention_type": "taker_at_cross",
+        # deterministic id -> Kalshi dedupes a retried order instead of doubling it
+        "client_order_id": str(uuid.uuid5(uuid.NAMESPACE_URL, f"kw:{ticker}:{side}")),
     }
     if not live:
         return OrderResult(dry_run=True, payload=payload)
     s = session or _session()
-    r = s.post(f"{BASE}/portfolio/orders", json=payload,
-               headers=_signed_headers("POST", "/trade-api/v2/portfolio/orders"), timeout=timeout)
+    r = s.post(f"{BASE}/portfolio/events/orders", json=payload,
+               headers=_signed_headers("POST", _ORDERS_PATH), timeout=timeout)
     r.raise_for_status()
     return OrderResult(dry_run=False, payload=payload, response=r.json())

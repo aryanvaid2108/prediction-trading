@@ -28,6 +28,7 @@ from wx.stations import get
 BANKROLL = float(os.environ.get("LIVE_BANKROLL", "750"))
 MAX_TOTAL_STAKE = float(os.environ.get("LIVE_MAX_STAKE", str(BANKROLL)))  # combined cap
 PER_STATION_FRAC = float(os.environ.get("LIVE_STATION_FRAC", "0.25"))     # diversify
+MAX_ORDERS = int(os.environ.get("LIVE_MAX_ORDERS") or "0")                # 0 = unlimited (smoke-test with 1)
 MIN_EDGE, KELLY = 0.03, 0.25
 MARKET_TZ = ZoneInfo("America/New_York")
 WINDOW_ET = (10, 16)
@@ -154,6 +155,10 @@ def main(*args):
         print("WARNING: outside the window — preview only; edges are weaker.")
 
     plan, spent = build_plan(icaos, target, now_utc, led)
+    if MAX_ORDERS and len(plan) > MAX_ORDERS:
+        plan = plan[:MAX_ORDERS]
+        spent = sum(o.count * o.price for o in plan)
+        print(f"LIVE_MAX_ORDERS={MAX_ORDERS} — capping to the first {MAX_ORDERS} order(s).")
     if not plan:
         print("no qualifying edges (or caps already reached) — nothing to do."); return
     if live:
