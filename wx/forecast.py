@@ -1,3 +1,4 @@
+import time
 from datetime import date
 
 import pandas as pd
@@ -22,6 +23,21 @@ if __import__("os").environ.get("WITH_NBM"):
     ARCHIVE_MODELS += ",ncep_nbm_conus"
 
 
+def _get_hourly(url: str, params: dict, timeout: int, retries: int = 4) -> dict:
+    """GET an Open-Meteo endpoint with retries — the archive API times out sporadically,
+    and a dropped station would silently shrink the trading book."""
+    last = None
+    for attempt in range(retries):
+        try:
+            r = requests.get(url, params=params, timeout=timeout)
+            r.raise_for_status()
+            return r.json()["hourly"]
+        except requests.RequestException as e:
+            last = e
+            time.sleep(2 * (attempt + 1))
+    raise last
+
+
 def _parse_members(hourly: dict) -> pd.DataFrame:
     time = pd.to_datetime(hourly["time"])
     frames = []
@@ -42,9 +58,7 @@ def fetch_members(lat: float, lon: float, forecast_days: int = 3,
         "models": models, "forecast_days": forecast_days, "past_days": past_days,
         "temperature_unit": "fahrenheit", "timezone": "GMT",
     }
-    r = requests.get(ENSEMBLE_URL, params=params, timeout=timeout)
-    r.raise_for_status()
-    return _parse_members(r.json()["hourly"])
+    return _parse_members(_get_hourly(ENSEMBLE_URL, params, timeout))
 
 
 def fetch_members_forecast(lat: float, lon: float, forecast_days: int = 2,
@@ -55,9 +69,7 @@ def fetch_members_forecast(lat: float, lon: float, forecast_days: int = 2,
         "models": models, "forecast_days": forecast_days,
         "temperature_unit": "fahrenheit", "timezone": "GMT",
     }
-    r = requests.get(FORECAST_URL, params=params, timeout=timeout)
-    r.raise_for_status()
-    return _parse_members(r.json()["hourly"])
+    return _parse_members(_get_hourly(FORECAST_URL, params, timeout))
 
 
 def fetch_members_archive(lat: float, lon: float, start: date, end: date,
@@ -72,9 +84,7 @@ def fetch_members_archive(lat: float, lon: float, start: date, end: date,
         "models": models, "start_date": start.isoformat(), "end_date": end.isoformat(),
         "temperature_unit": "fahrenheit", "timezone": "GMT",
     }
-    r = requests.get(ARCHIVE_URL, params=params, timeout=timeout)
-    r.raise_for_status()
-    return _parse_members(r.json()["hourly"])
+    return _parse_members(_get_hourly(ARCHIVE_URL, params, timeout))
 
 
 def member_daily_highs(members: pd.DataFrame, std_utc_offset: int) -> pd.DataFrame:
