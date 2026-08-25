@@ -75,9 +75,8 @@ def build_plan(icaos, target, now_utc, led):
             for d in trading.cap_exposure(fresh, station_left):
                 m = by[d.ticker]
                 lo, hi = trading.market_bounds(m["strike_type"], m.get("floor"), m.get("cap"))
-                mk = trading.maker_price(m, d.side)
-                price, maker = (mk, True) if mk else (d.price, False)
-                plan.append(Order(icao, d.ticker, d.side, lo, hi, price, d.count, maker))
+                # taker price (the ask decide() approved) — placed marketable/IOC so it fills now
+                plan.append(Order(icao, d.ticker, d.side, lo, hi, d.price, d.count, maker=False))
         except Exception:
             print(f"  {icao}: ERROR\n{traceback.format_exc()}")
     # global cap across all stations, net of what is already staked live today
@@ -108,29 +107,46 @@ def preview(plan, spent):
     print("\nPREVIEW ONLY — no orders placed. Set LIVE=1 to submit these for real.")
 
 
+def _filled_count(response):
+    """Actual contracts filled, from the V2 create-order response (None if unreadable)."""
+    o = (response or {}).get("order", response or {})
+    try:
+        return int(round(float(o.get("fill_count_fp"))))
+    except (TypeError, ValueError):
+        return None
+
+
 def place(plan, target, led, now_et):
     key = target.isoformat()
     session = kalshi._session()
-    placed, failed = [], []
-    print(f"\nPLACING {len(plan)} LIVE orders…\n")
+    cross = float(os.environ.get("LIVE_CROSS_CENTS", "1")) / 100   # cross the touch to fill now
+    placed, failed, total = [], [], 0
+    print(f"\nPLACING {len(plan)} LIVE marketable/IOC orders…\n")
     for o in plan:
+        px = max(0.01, min(0.99, round(o.price + cross, 2)))       # marketable limit
         try:
-            kalshi.place_order(o.ticker, o.side, o.count, o.price, live=True, session=session)
-            print(f"  ✓ {o.icao} {o.side.upper()} {bucket(o)} {o.count}x @ {o.price:.2f}")
-            led.add(paper.Fill(o.ticker, o.icao, key, o.side, o.lo, o.hi, o.price, o.count, maker=o.maker))
-            placed.append(o)
+            res = kalshi.place_order(o.ticker, o.side, o.count, px, live=True,
+                                     session=session, time_in_force="immediate_or_cancel")
+            filled = _filled_count(res.response)
+            if filled is None:
+                print(f"     (raw response: {res.response})")      # shape check, first run
+                filled = o.count
+            print(f"  ✓ {o.icao} {o.side.upper()} {bucket(o)} filled {filled}/{o.count} @ ~{o.price:.2f}")
+            if filled > 0:
+                led.add(paper.Fill(o.ticker, o.icao, key, o.side, o.lo, o.hi, o.price, filled, maker=False))
+                placed.append((o, filled)); total += filled
         except Exception as e:
             print(f"  ✗ {o.icao} {o.side.upper()} {bucket(o)} FAILED: {type(e).__name__}: {e}")
             failed.append(o)
     led.save()
-    staked = sum(o.count * o.price for o in placed)
-    print(f"\nplaced {len(placed)}/{len(plan)} orders (${staked:.2f}). Run `reconcile` to sync to actual fills.")
+    staked = sum(f * o.price for o, f in placed)
+    print(f"\nfilled {total} contracts across {len(placed)}/{len(plan)} markets (${staked:.2f}).")
 
-    # rich phone notification
+    # rich phone notification (actual fills)
     byst = {}
-    for o in placed:
+    for o, f in placed:
         byst[o.icao] = byst.get(o.icao, 0) + 1
-    L = [f"🟢 {len(placed)}/{len(plan)} orders · ${staked:.0f} staked  ({now_et:%H:%M} ET)"]
+    L = [f"🟢 {len(placed)} markets · {total} contracts · ${staked:.0f} filled  ({now_et:%H:%M} ET)"]
     if byst:
         L.append("  " + " · ".join(f"{ic.replace('K','')} {n}" for ic, n in sorted(byst.items())))
     if failed:
