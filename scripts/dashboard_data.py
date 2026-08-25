@@ -53,13 +53,13 @@ def current_mark(session, cache, st, target, ticker, side):
     return m["yes_bid"] if side == "yes" else m["no_bid"]
 
 
-def main():
-    led = paper.Ledger()
-    s = led.summary()
-    session = kalshi._session()
-    mkt_cache, temp_cache = {}, {}
-    today = date.today()
+PAPER_LEDGER = paper.LEDGER
+LIVE_LEDGER = paper.LEDGER.parent / "live_ledger.json"
 
+
+def build_env(led, session, mkt_cache, temp_cache, today):
+    """summary + stations + positions + equity for one ledger (an environment)."""
+    s = led.summary()
     positions = []
     for f in led.fills:
         st = stations.get(f.icao)
@@ -112,22 +112,35 @@ def main():
 
     open_stake = sum(f.count * f.price for f in led.fills if f.pnl is None)
     open_unreal = sum(p["unrealized"] or 0.0 for p in positions if not p["settled"])
-    data = {
-        "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
-        "bankroll": BANKROLL, "today": today.isoformat(),
-        "active": stations.ACTIVE,
+    return {
         "summary": {
             "realized": s["realized_pnl"], "roi": s["roi"], "win_rate": s["win_rate"],
             "closed": s["closed"], "open": s["open"],
             "open_stake": round(open_stake, 2), "open_unrealized": round(open_unreal, 2),
         },
         "stations": sorted(st_map.values(), key=lambda x: x["icao"]),
-        "positions": sorted(positions, key=lambda p: (not p["settled"], p["target"], p["icao"]), reverse=False),
+        "positions": sorted(positions, key=lambda p: (not p["settled"], p["target"], p["icao"])),
         "equity": equity,
+    }
+
+
+def main():
+    session = kalshi._session()
+    mkt_cache, temp_cache = {}, {}
+    today = date.today()
+    envs = {
+        "live": build_env(paper.Ledger(LIVE_LEDGER), session, mkt_cache, temp_cache, today),
+        "paper": build_env(paper.Ledger(PAPER_LEDGER), session, mkt_cache, temp_cache, today),
+    }
+    data = {
+        "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
+        "bankroll": BANKROLL, "today": today.isoformat(), "active": stations.ACTIVE,
+        "envs": envs,
     }
     OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(json.dumps(data, indent=1))
-    print(f"wrote {OUT}  ({len(positions)} positions, {len(st_map)} stations)")
+    print(f"wrote {OUT}  (live {len(envs['live']['positions'])} pos, "
+          f"paper {len(envs['paper']['positions'])} pos)")
 
 
 if __name__ == "__main__":

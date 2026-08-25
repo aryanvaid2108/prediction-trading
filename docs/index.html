@@ -56,6 +56,16 @@
   button.tgl{background:var(--panel); border:1px solid var(--line); color:var(--muted); border-radius:999px;
     width:34px; height:34px; cursor:pointer; font-size:15px; box-shadow:var(--shadow)}
   button.tgl:hover{color:var(--ink)}
+  .seg-wrap{display:inline-flex; background:var(--panel-2); border:1px solid var(--line); border-radius:999px; padding:3px; box-shadow:var(--shadow)}
+  .seg{display:inline-flex; align-items:center; gap:6px; border:none; background:transparent; color:var(--muted);
+    font:600 13px/1 inherit; padding:6px 14px; border-radius:999px; cursor:pointer}
+  .seg:hover{color:var(--ink)}
+  .seg.on{background:var(--panel); color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.15)}
+  .segdot{width:8px; height:8px; border-radius:50%; background:var(--muted)}
+  .seg.on .segdot.live{background:var(--neg)} .seg.on .segdot.paper{background:var(--accent)}
+  .envnote{background:var(--panel); border:1px dashed var(--line); border-radius:var(--radius); padding:14px 16px;
+    color:var(--muted); font-size:13px; margin-bottom:16px; text-align:center}
+  .envnote b{color:var(--ink)}
 
   .cards{display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:20px}
   .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow)}
@@ -104,12 +114,17 @@
       <div class="sub" id="sub">loading…</div>
     </div>
     <div class="toolbar">
+      <div class="seg-wrap" id="seg">
+        <button class="seg" data-env="live"><span class="segdot live"></span>Live</button>
+        <button class="seg" data-env="paper"><span class="segdot paper"></span>Paper</button>
+      </div>
       <span class="badge"><span class="dot-live"></span><span id="updated">—</span></span>
       <button class="tgl" id="theme" title="Toggle theme" aria-label="Toggle theme">◐</button>
     </div>
   </header>
 
   <section class="cards" id="cards"></section>
+  <div id="envnote"></div>
 
   <div class="grid2">
     <div class="panel">
@@ -353,25 +368,50 @@ function ago(iso){ const t=Date.parse(iso.replace("Z","Z")); if(isNaN(t))return 
   const m=Math.round((Date.now()-t)/60000); if(m<1)return "just now"; if(m<60)return m+"m ago";
   const h=Math.floor(m/60); return h+"h "+(m%60)+"m ago"; }
 
-let LAST=null;
-function render(d){
-  LAST=d;
+const EMPTY_ENV={summary:{realized:0,roi:null,win_rate:null,closed:0,open:0,open_stake:0,open_unrealized:0},stations:[],positions:[],equity:[]};
+let RAW=null, ENV=null;
+
+function envView(){
+  const d=RAW, e=(d.envs&&d.envs[ENV])||EMPTY_ENV;
+  return {...e, bankroll:d.bankroll, active:d.active, updated:d.updated, env:ENV};
+}
+function setEnv(env){ ENV=env; try{localStorage.setItem("wxenv",env)}catch(e){} draw(); }
+
+function draw(){
+  if(!RAW)return;
+  const d=envView(), live=ENV==="live";
+  document.querySelectorAll(".seg").forEach(b=>b.classList.toggle("on", b.dataset.env===ENV));
   document.getElementById("sub").innerHTML=
-    `bankroll <b>$${d.bankroll.toFixed(0)}</b> · stations <b>${(d.active||[]).map(s=>s.replace("K","")).join(" · ")}</b> · paper — no live orders`;
+    `bankroll <b>$${d.bankroll.toFixed(0)}</b> · stations <b>${(d.active||[]).map(s=>s.replace("K","")).join(" · ")}</b> · `
+    +(live?`<b style="color:var(--neg)">LIVE</b> — real orders`:`<b>PAPER</b> — strategy testing, no live orders`);
   document.getElementById("updated").textContent="updated "+ago(d.updated);
+  const note=document.getElementById("envnote");
+  if(live && !d.positions.length)
+    note.innerHTML='<div class="envnote">No <b>live</b> trades yet — the bot is running in <b>paper</b>. Promote a strategy to prod to populate this view.</div>';
+  else if(!live)
+    note.innerHTML='<div class="envnote">📎 <b>Paper</b> — a sandbox for testing new strategies before promoting them to <b>Live</b>. No real money.</div>';
+  else note.innerHTML="";
   renderCards(d); renderMap(d); renderTemp(d); renderMarks(d); renderEquity(d); renderTables(d);
 }
 
 async function load(){
   try{
     const r=await fetch("./data.json?t="+Date.now(),{cache:"no-store"});
-    if(!r.ok)throw new Error(r.status); render(await r.json());
+    if(!r.ok)throw new Error(r.status); RAW=await r.json();
+    if(ENV===null){
+      let sv=null; try{sv=localStorage.getItem("wxenv")}catch(e){}
+      ENV = sv || ((RAW.envs&&RAW.envs.live&&RAW.envs.live.positions.length)?"live":"paper");
+    }
+    draw();
   }catch(e){
     document.getElementById("updated").textContent="data.json not found yet";
-    if(!LAST)document.getElementById("cards").innerHTML=
+    if(!RAW)document.getElementById("cards").innerHTML=
       '<div class="empty" style="grid-column:1/-1">Waiting for the first Actions tick to publish data.json…</div>';
   }
 }
+document.getElementById("seg").addEventListener("click",e=>{
+  const b=e.target.closest(".seg"); if(b)setEnv(b.dataset.env);
+});
 // theme toggle
 const tb=document.getElementById("theme");
 tb.onclick=()=>{ const cur=document.documentElement.getAttribute("data-theme");
@@ -380,7 +420,7 @@ tb.onclick=()=>{ const cur=document.documentElement.getAttribute("data-theme");
 try{const sv=localStorage.getItem("wxtheme"); if(sv)document.documentElement.setAttribute("data-theme",sv);}catch(e){}
 
 load(); setInterval(load,60000);
-setInterval(()=>{ if(LAST)document.getElementById("updated").textContent="updated "+ago(LAST.updated); },30000);
+setInterval(()=>{ if(RAW)document.getElementById("updated").textContent="updated "+ago(RAW.updated); },30000);
 </script>
 </body>
 </html>
