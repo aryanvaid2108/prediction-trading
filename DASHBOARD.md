@@ -1,33 +1,42 @@
 # 📈 Paper-trading dashboard
 
-_Updated 2026-08-24 19:22 UTC · bankroll $1000 · stations KNYC · KMDW · KAUS · KLAX · KSFO · no live orders placed_
+_Updated 2026-08-25 06:58 UTC · bankroll $1000 · stations KNYC · KMDW · KAUS · KLAX · KSFO · no live orders placed_
 
 | Realized P&L | ROI (on stake) | Win rate | Closed | Open | Open stake |
 |---:|---:|---:|---:|---:|---:|
-| **$+0.00** | **—** | **—** | 0 | 13 | $726 |
+| **$+80.05** | **+11.0%** | **54%** | 13 | 0 | $0 |
 
 ### By station
 
 | Station | Positions | Open | Closed | Realized P&L |
 |:--|--:|--:|--:|--:|
-| KAUS | 3 | 3 | 0 | $+0.00 |
-| KNYC | 5 | 5 | 0 | $+0.00 |
-| KSFO | 5 | 5 | 0 | $+0.00 |
+| KAUS | 3 | 0 | 3 | $-122.91 |
+| KNYC | 5 | 0 | 5 | $+259.62 |
+| KSFO | 5 | 0 | 5 | $-56.66 |
 
-### Open positions
+### Cumulative realized P&L
 
-| Station | Settles | Bucket | Side | Price | Qty | Type |
-|:--|:--|:--|:--|--:|--:|:--|
-| KAUS | 2026-08-24 | 102–103° | YES | $0.15 | 588 | maker |
-| KAUS | 2026-08-24 | 104–105° | NO | $0.31 | 169 | maker |
-| KAUS | 2026-08-24 | 106–107° | NO | $0.83 | 104 | maker |
-| KNYC | 2026-08-24 | 80–81° | NO | $0.43 | 227 | maker |
-| KNYC | 2026-08-24 | 78–79° | YES | $0.39 | 249 | maker |
-| KNYC | 2026-08-24 | ≤77° | YES | $0.02 | 608 | maker |
-| KNYC | 2026-08-24 | 82–83° | NO | $0.94 | 33 | maker |
-| KNYC | 2026-08-24 | 80–81° | YES | $0.41 | 28 | maker |
-| KSFO | 2026-08-24 | 71–72° | YES | $0.40 | 159 | maker |
-| KSFO | 2026-08-24 | 69–70° | YES | $0.11 | 134 | maker |
-| KSFO | 2026-08-24 | ≤68° | NO | $0.92 | 107 | maker |
-| KSFO | 2026-08-24 | 75–76° | NO | $0.92 | 74 | maker |
-| KSFO | 2026-08-24 | 73–74° | YES | $0.40 | 12 | maker |
+```mermaid
+xychart-beta
+  x-axis ["08-24"]
+  y-axis "USD"
+  line [80.05]
+```
+
+### Recently settled
+
+| Station | Day | Bucket | Side | Settled high | P&L |
+|:--|:--|:--|:--|--:|--:|
+| KNYC | 2026-08-24 | 80–81° | NO | 79° | $+129.39 |
+| KNYC | 2026-08-24 | 78–79° | YES | 79° | $+151.89 |
+| KNYC | 2026-08-24 | ≤77° | YES | 79° | $-12.16 |
+| KNYC | 2026-08-24 | 82–83° | NO | 79° | $+1.98 |
+| KSFO | 2026-08-24 | 71–72° | YES | 73° | $-63.60 |
+| KSFO | 2026-08-24 | 69–70° | YES | 73° | $-14.74 |
+| KSFO | 2026-08-24 | ≤68° | NO | 73° | $+8.56 |
+| KSFO | 2026-08-24 | 75–76° | NO | 73° | $+5.92 |
+| KAUS | 2026-08-24 | 102–103° | YES | 104° | $-88.20 |
+| KAUS | 2026-08-24 | 104–105° | NO | 104° | $-52.39 |
+| KAUS | 2026-08-24 | 106–107° | NO | 104° | $+17.68 |
+| KSFO | 2026-08-24 | 73–74° | YES | 73° | $+7.20 |
+| KNYC | 2026-08-24 | 80–81° | YES | 79° | $-11.48 |
