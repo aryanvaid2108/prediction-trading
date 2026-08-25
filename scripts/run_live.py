@@ -145,20 +145,21 @@ def place(plan, target, led, now_et):
 
 
 def reconcile():
-    """Print ACTUAL Kalshi state — filled positions + resting orders (ground truth)."""
+    """Print ACTUAL Kalshi state — orders by status (fills) + positions (ground truth)."""
+    for status in ("resting", "executed", "canceled"):
+        os_ = kalshi.orders(status=status)
+        print(f"\n{status}: {len(os_)}")
+        for o in os_:
+            print(f"  {o.get('ticker'):24} {str(o.get('outcome_side')).upper():3} "
+                  f"book={o.get('book_side'):4} init={o.get('initial_count_fp')} "
+                  f"filled={o.get('fill_count_fp')} rem={o.get('remaining_count_fp')} "
+                  f"yes=${o.get('yes_price_dollars')} no=${o.get('no_price_dollars')}")
     pos = [p for p in kalshi.positions() if p.get("position")]
-    print(f"positions (filled): {len(pos)}")
+    print(f"\npositions: {len(pos)}")
     for p in pos:
         print(f"  {p.get('ticker')}  position={p.get('position')}  "
               f"exposure=${(p.get('market_exposure') or 0)/100:.2f}  "
               f"realized=${(p.get('realized_pnl') or 0)/100:.2f}")
-    resting = kalshi.orders(status="resting")
-    print(f"\nresting orders (unfilled): {len(resting)}")
-    for o in resting:
-        print(f"  {o.get('ticker'):24} {str(o.get('outcome_side')).upper():3} "
-              f"book={o.get('book_side'):4} rem={o.get('remaining_count_fp')} "
-              f"filled={o.get('fill_count_fp')} "
-              f"yes=${o.get('yes_price_dollars')} no=${o.get('no_price_dollars')}")
 
 
 def main(*args):
