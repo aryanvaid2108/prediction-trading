@@ -7,6 +7,12 @@ name: dashboard
 #
 # One-time setup: repo Settings > Pages > Build and deployment > Source = "GitHub Actions".
 on:
+  push:
+    branches: [main]
+    paths:                        # redeploy immediately when the dashboard itself changes
+      - "docs/**"
+      - "scripts/dashboard_data.py"
+      - ".github/workflows/dashboard.yml"
   schedule:
     - cron: "*/30 14-23 * * *"   # every 30 min, ~10:00-19:30 ET (trading day)
   workflow_run:
