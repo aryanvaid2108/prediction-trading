@@ -1,0 +1,30 @@
+name: check-auth
+
+# Manual, READ-ONLY validation that the Kalshi keys + RSA-PSS signing work.
+# Hits GET /portfolio/balance — places no order, risks no money. Run this once
+# after adding the secrets, before building the live order path.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Write Kalshi private key
+        run: |
+          printf '%s' "${{ secrets.KALSHI_PRIVATE_KEY }}" > /tmp/kalshi.pem
+          chmod 600 /tmp/kalshi.pem
+      - name: Check auth (read-only balance)
+        env:
+          KALSHI_ACCESS_KEY: ${{ secrets.KALSHI_ACCESS_KEY }}
+          KALSHI_PRIVATE_KEY_PATH: /tmp/kalshi.pem
+        run: python -m scripts.check_auth

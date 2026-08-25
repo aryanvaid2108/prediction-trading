@@ -79,6 +79,41 @@ def candlesticks(series: str, ticker: str, start_ts: int, end_ts: int,
     return []
 
 
+def _signed_headers(method: str, path: str) -> dict:
+    """RSA-PSS auth headers for a signed request. path is the full request path
+    (no query), e.g. /trade-api/v2/portfolio/balance. Signs timestamp+method+path."""
+    key_id = os.environ.get("KALSHI_ACCESS_KEY")
+    key_path = os.environ.get("KALSHI_PRIVATE_KEY_PATH")
+    if not key_id or not key_path:
+        raise RuntimeError("signed request needs KALSHI_ACCESS_KEY and KALSHI_PRIVATE_KEY_PATH")
+    import base64
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import padding
+    with open(key_path, "rb") as f:
+        pk = serialization.load_pem_private_key(f.read(), password=None)
+    ts = str(int(time.time() * 1000))
+    sig = pk.sign(
+        (ts + method + path).encode(),
+        padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.DIGEST_LENGTH),
+        hashes.SHA256(),
+    )
+    return {
+        "KALSHI-ACCESS-KEY": key_id,
+        "KALSHI-ACCESS-SIGNATURE": base64.b64encode(sig).decode(),
+        "KALSHI-ACCESS-TIMESTAMP": ts,
+    }
+
+
+def balance(session=None, timeout: int = 30) -> dict:
+    """Signed, READ-ONLY account balance. Validates that the keys + signing work
+    without touching an order. Returns e.g. {'balance': <cents>}."""
+    s = session or _session()
+    r = s.get(f"{BASE}/portfolio/balance",
+              headers=_signed_headers("GET", "/trade-api/v2/portfolio/balance"), timeout=timeout)
+    r.raise_for_status()
+    return r.json()
+
+
 @dataclass
 class OrderResult:
     dry_run: bool
@@ -106,32 +141,8 @@ def place_order(ticker: str, side: str, count: int, price: float,
     }
     if not live:
         return OrderResult(dry_run=True, payload=payload)
-
-    key_id = os.environ.get("KALSHI_ACCESS_KEY")
-    key_path = os.environ.get("KALSHI_PRIVATE_KEY_PATH")
-    if not key_id or not key_path:
-        raise RuntimeError("live order requires KALSHI_ACCESS_KEY and KALSHI_PRIVATE_KEY_PATH")
-
-    import base64
-    import time
-    from cryptography.hazmat.primitives import hashes, serialization
-    from cryptography.hazmat.primitives.asymmetric import padding
-
-    with open(key_path, "rb") as f:
-        pk = serialization.load_pem_private_key(f.read(), password=None)
-    ts = str(int(time.time() * 1000))
-    method, path = "POST", "/trade-api/v2/portfolio/orders"
-    sig = pk.sign(
-        (ts + method + path).encode(),
-        padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.DIGEST_LENGTH),
-        hashes.SHA256(),
-    )
     s = session or _session()
-    s.headers.update({
-        "KALSHI-ACCESS-KEY": key_id,
-        "KALSHI-ACCESS-SIGNATURE": base64.b64encode(sig).decode(),
-        "KALSHI-ACCESS-TIMESTAMP": ts,
-    })
-    r = s.post(f"{BASE}/portfolio/orders", json=payload, timeout=timeout)
+    r = s.post(f"{BASE}/portfolio/orders", json=payload,
+               headers=_signed_headers("POST", "/trade-api/v2/portfolio/orders"), timeout=timeout)
     r.raise_for_status()
     return OrderResult(dry_run=False, payload=payload, response=r.json())
