@@ -1,0 +1,62 @@
+name: live
+
+# MANUAL ONLY. No schedule — nothing auto-trades. Choose the mode when dispatching:
+#   preview   - compute + print the exact order plan, place NOTHING (safe, default)
+#   live      - place the plan for REAL (spends money)
+#   reconcile - print your actual Kalshi positions (ground truth for fills)
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "preview (safe) | live (REAL money) | reconcile"
+        type: choice
+        options: [preview, live, reconcile]
+        default: preview
+
+permissions:
+  contents: write        # to commit live_ledger.json after a live run
+
+concurrency:
+  group: live
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Write Kalshi private key
+        run: |
+          printf '%s' "${{ secrets.KALSHI_PRIVATE_KEY }}" > /tmp/kalshi.pem
+          chmod 600 /tmp/kalshi.pem
+
+      - name: Run (${{ inputs.mode }})
+        env:
+          KALSHI_ACCESS_KEY: ${{ secrets.KALSHI_ACCESS_KEY }}
+          KALSHI_PRIVATE_KEY_PATH: /tmp/kalshi.pem
+          LIVE: ${{ inputs.mode == 'live' && '1' || '0' }}
+        run: |
+          if [ "${{ inputs.mode }}" = "reconcile" ]; then
+            python -m scripts.run_live reconcile
+          else
+            python -m scripts.run_live
+          fi
+
+      - name: Commit live ledger if it changed
+        if: ${{ inputs.mode == 'live' }}
+        run: |
+          git config user.name "kalshi-weather-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .cache/live_ledger.json
+          if git diff --cached --quiet; then
+            echo "no live ledger change"
+          else
+            git commit -m "live orders $(date -u +'%F %H:%MZ')"
+            git push
+          fi

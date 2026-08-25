@@ -114,6 +114,15 @@ def balance(session=None, timeout: int = 30) -> dict:
     return r.json()
 
 
+def positions(session=None, timeout: int = 30) -> list:
+    """Signed, READ-ONLY list of real market positions (ground truth for fills)."""
+    s = session or _session()
+    r = s.get(f"{BASE}/portfolio/positions",
+              headers=_signed_headers("GET", "/trade-api/v2/portfolio/positions"), timeout=timeout)
+    r.raise_for_status()
+    return r.json().get("market_positions", [])
+
+
 @dataclass
 class OrderResult:
     dry_run: bool
