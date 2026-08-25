@@ -11,7 +11,9 @@ from datetime import date
 
 import requests
 
-BASE = "https://api.elections.kalshi.com/trade-api/v2"
+# Recommended production host for the external Trade API (per Kalshi docs). The
+# legacy api.elections host still serves reads but returns 410 on order creation.
+BASE = "https://external-api.kalshi.com/trade-api/v2"
 _MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
 
 
