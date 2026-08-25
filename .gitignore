@@ -7,4 +7,7 @@ __pycache__/
 .cache/*.log
 # keep .cache/paper_ledger.json committed so the cloud loop persists state
 .cache/candles.json
+.cache/candles_full.json
 .cache/afd_signals.json
+# regenerated and deployed by the dashboard workflow each run
+docs/data.json

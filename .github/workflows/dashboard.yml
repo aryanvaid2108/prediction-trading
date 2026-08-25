@@ -1,0 +1,51 @@
+name: dashboard
+
+# Rebuilds docs/data.json (live temps + current marks from the committed ledger)
+# and deploys docs/ to GitHub Pages. Uses Actions' native Pages deploy so the
+# frequent refreshes never commit to main — history stays clean. The page itself
+# also re-polls data.json every 60s, so an open tab stays fresh between deploys.
+#
+# One-time setup: repo Settings > Pages > Build and deployment > Source = "GitHub Actions".
+on:
+  schedule:
+    - cron: "*/30 14-23 * * *"   # every 30 min, ~10:00-19:30 ET (trading day)
+  workflow_run:
+    workflows: ["paper-loop"]     # redeploy right after each trade tick
+    types: [completed]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4       # gets the latest committed ledger
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build dashboard data
+        run: python -m scripts.dashboard_data   # writes docs/data.json
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

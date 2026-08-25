@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalshi Weather Bot · live paper dashboard</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --panel:#ffffff; --panel-2:#eef2f7; --ink:#17202e; --muted:#5b6a80;
+    --line:#dbe2ec; --accent:#2b6cb0;
+    --pos:#1f9e6b; --neg:#d9534f;
+    --c0:#2b6cb0; --c1:#3aa0c0; --c2:#4fd1c5; --c3:#f6ad3c; --c4:#ef7d3a; --c5:#e0533d;
+    --shadow:0 1px 2px rgba(20,30,48,.06), 0 8px 24px rgba(20,30,48,.05);
+    --radius:14px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0e141b; --panel:#151d27; --panel-2:#1b2531; --ink:#e7edf4; --muted:#8ea0b6;
+      --line:#26313f; --accent:#5aa9e6;
+      --pos:#3ad39a; --neg:#f0736b;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#f5f7fa; --panel:#fff; --panel-2:#eef2f7; --ink:#17202e; --muted:#5b6a80;
+    --line:#dbe2ec; --accent:#2b6cb0; --pos:#1f9e6b; --neg:#d9534f;
+    --shadow:0 1px 2px rgba(20,30,48,.06), 0 8px 24px rgba(20,30,48,.05);
+  }
+  :root[data-theme="dark"]{
+    --bg:#0e141b; --panel:#151d27; --panel-2:#1b2531; --ink:#e7edf4; --muted:#8ea0b6;
+    --line:#26313f; --accent:#5aa9e6; --pos:#3ad39a; --neg:#f0736b;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased; padding:24px 20px 64px;
+  }
+  .wrap{max-width:1120px; margin:0 auto}
+  .num{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-variant-numeric:tabular-nums}
+  .pos{color:var(--pos)} .neg{color:var(--neg)}
+  .eyebrow{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:600}
+
+  header{display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:22px; flex-wrap:wrap}
+  h1{font-size:26px; line-height:1.1; margin:2px 0 6px; letter-spacing:-.02em; font-weight:700}
+  .sub{color:var(--muted); font-size:13px}
+  .sub b{color:var(--ink); font-weight:600}
+  .toolbar{display:flex; align-items:center; gap:10px}
+  .badge{display:inline-flex; align-items:center; gap:7px; background:var(--panel); border:1px solid var(--line);
+    border-radius:999px; padding:6px 12px; font-size:12px; color:var(--muted); box-shadow:var(--shadow)}
+  .dot-live{width:8px; height:8px; border-radius:50%; background:var(--pos); box-shadow:0 0 0 0 var(--pos); animation:pulse 2.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(31,158,107,.5)}70%{box-shadow:0 0 0 7px rgba(31,158,107,0)}100%{box-shadow:0 0 0 0 rgba(31,158,107,0)}}
+  @media (prefers-reduced-motion:reduce){.dot-live{animation:none}}
+  button.tgl{background:var(--panel); border:1px solid var(--line); color:var(--muted); border-radius:999px;
+    width:34px; height:34px; cursor:pointer; font-size:15px; box-shadow:var(--shadow)}
+  button.tgl:hover{color:var(--ink)}
+
+  .cards{display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:20px}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow)}
+  .card .k{font-size:12px; color:var(--muted); font-weight:600; margin-bottom:8px}
+  .card .v{font-size:24px; font-weight:700; letter-spacing:-.02em}
+  .card .s{font-size:12px; color:var(--muted); margin-top:3px}
+
+  .grid2{display:grid; grid-template-columns:1.15fr 1fr; gap:16px; margin-bottom:16px}
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; box-shadow:var(--shadow)}
+  .panel h2{font-size:13px; margin:0 0 2px; font-weight:700; letter-spacing:-.01em}
+  .panel .cap{color:var(--muted); font-size:12px; margin:0 0 12px}
+  .full{margin-bottom:16px}
+
+  svg{display:block; width:100%; height:auto; overflow:visible}
+  .maplbl{font:600 11px/1 ui-monospace,monospace; fill:var(--ink)}
+  .mapsub{font:10px/1 ui-monospace,monospace; fill:var(--muted)}
+  .grat{stroke:var(--line); stroke-width:1}
+  .gratlbl{font:9px/1 ui-monospace,monospace; fill:var(--muted)}
+
+  .legend{display:flex; align-items:center; gap:8px; font-size:11px; color:var(--muted); margin-top:8px}
+  .ramp{height:8px; width:150px; border-radius:4px;
+    background:linear-gradient(90deg,var(--c0),var(--c1),var(--c2),var(--c3),var(--c4),var(--c5))}
+
+  table{width:100%; border-collapse:collapse; font-size:13px}
+  th{text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:600;
+    padding:8px 10px; border-bottom:1px solid var(--line)}
+  td{padding:9px 10px; border-bottom:1px solid var(--line)}
+  tr:last-child td{border-bottom:none}
+  td.r,th.r{text-align:right}
+  .pill{display:inline-block; font-size:11px; font-weight:600; padding:2px 8px; border-radius:999px; border:1px solid var(--line)}
+  .pill.yes{color:var(--pos)} .pill.no{color:var(--neg)}
+  .tables{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  .empty{color:var(--muted); font-size:13px; padding:18px 0; text-align:center}
+  footer{color:var(--muted); font-size:12px; text-align:center; margin-top:28px}
+  @media (max-width:820px){
+    .cards{grid-template-columns:repeat(2,1fr)} .grid2{grid-template-columns:1fr} .tables{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Kalshi weather bot · paper trading</div>
+      <h1>Live positions dashboard</h1>
+      <div class="sub" id="sub">loading…</div>
+    </div>
+    <div class="toolbar">
+      <span class="badge"><span class="dot-live"></span><span id="updated">—</span></span>
+      <button class="tgl" id="theme" title="Toggle theme" aria-label="Toggle theme">◐</button>
+    </div>
+  </header>
+
+  <section class="cards" id="cards"></section>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>Where we're trading</h2>
+      <p class="cap">Station dots placed by real geography · color = latest temperature · size = positions</p>
+      <div id="map"></div>
+      <div class="legend"><span>cooler</span><span class="ramp"></span><span>hotter</span>
+        <span style="margin-left:auto" id="maplegend"></span></div>
+    </div>
+    <div class="panel">
+      <h2>Temperature vs. traded buckets</h2>
+      <p class="cap">Bar = high so far today (or settled high) · bands = buckets we hold, green if our side wins there</p>
+      <div id="temp"></div>
+    </div>
+  </div>
+
+  <div class="panel full">
+    <h2>Entry vs. current mark — open positions</h2>
+    <p class="cap">Dot = entry price we paid · arrow to current exit bid · we hold to settlement (this is mark-to-market only)</p>
+    <div id="marks"></div>
+  </div>
+
+  <div class="panel full">
+    <h2>Cumulative realized P&amp;L</h2>
+    <p class="cap">Settled days only</p>
+    <div id="equity"></div>
+  </div>
+
+  <div class="tables">
+    <div class="panel">
+      <h2>Open positions</h2>
+      <p class="cap" id="opencap"></p>
+      <div id="opentab"></div>
+    </div>
+    <div class="panel">
+      <h2>Recently settled</h2>
+      <p class="cap" id="closedcap"></p>
+      <div id="closedtab"></div>
+    </div>
+  </div>
+
+  <footer>Paper trading — no live orders placed · data refreshes each Actions tick and this page re-polls every 60s.</footer>
+</div>
+
+<script>
+const NS="http://www.w3.org/2000/svg";
+const el=(t,a={},kids=[])=>{const e=document.createElementNS(t==="svg"||["rect","circle","line","path","text","g","polyline","polygon"].includes(t)?NS:null,t);
+  for(const k in a)e.setAttribute(k,a[k]); (Array.isArray(kids)?kids:[kids]).forEach(c=>e.appendChild(typeof c==="string"?document.createTextNode(c):c)); return e;};
+const money=v=>(v>=0?"+$":"−$")+Math.abs(v).toFixed(2);
+const cents=v=>v==null?"—":(Math.round(v*100)+"¢");
+const cls=v=>v>0?"pos":v<0?"neg":"";
+
+// heat ramp 55–110°F -> color
+const STOPS=[[55,[43,108,176]],[68,[58,160,192]],[80,[79,209,197]],[90,[246,173,60]],[100,[239,125,58]],[110,[224,83,61]]];
+function heat(t){ if(t==null)return "var(--muted)";
+  t=Math.max(55,Math.min(110,t));
+  for(let i=1;i<STOPS.length;i++){ if(t<=STOPS[i][0]){ const[a,ca]=STOPS[i-1],[b,cb]=STOPS[i];
+    const f=(t-a)/(b-a), c=ca.map((x,j)=>Math.round(x+f*(cb[j]-x))); return `rgb(${c[0]},${c[1]},${c[2]})`; } }
+  return "rgb(224,83,61)"; }
+
+function svg(w,h){ const s=el("svg",{viewBox:`0 0 ${w} ${h}`,width:w,height:h}); s.W=w; s.H=h; return s; }
+
+function renderCards(d){
+  const s=d.summary, box=document.getElementById("cards"); box.innerHTML="";
+  const card=(k,v,vcls,sub)=>{const c=document.createElement("div"); c.className="card";
+    c.innerHTML=`<div class="k">${k}</div><div class="v num ${vcls||''}">${v}</div>`+(sub?`<div class="s num">${sub}</div>`:"");
+    return c;};
+  box.append(
+    card("Realized P&L", money(s.realized), cls(s.realized), (s.roi!=null?(s.roi*100).toFixed(1)+"% ROI":"—")),
+    card("Unrealized", s.open? money(s.open_unrealized):"—", cls(s.open_unrealized), "mark-to-market"),
+    card("Win rate", s.win_rate!=null?Math.round(s.win_rate*100)+"%":"—", "", s.closed+" settled"),
+    card("Open", String(s.open), "", "$"+s.open_stake.toFixed(0)+" staked"),
+    card("Closed", String(s.closed), "", "positions"),
+    card("Bankroll", "$"+d.bankroll.toFixed(0), "", "paper"),
+  );
+}
+
+function renderMap(d){
+  const box=document.getElementById("map"); box.innerHTML="";
+  const W=560,H=330,pad=34; const s=svg(W,H);
+  const LON=[-125,-66], LAT=[24,50];
+  const px=lon=>pad+(lon-LON[0])/(LON[1]-LON[0])*(W-2*pad);
+  const py=lat=>H-pad-(lat-LAT[0])/(LAT[1]-LAT[0])*(H-2*pad);
+  s.append(el("rect",{x:1,y:1,width:W-2,height:H-2,rx:12,fill:"var(--panel-2)",stroke:"var(--line)"}));
+  for(let lon=-120;lon<=-70;lon+=10){const x=px(lon);
+    s.append(el("line",{x1:x,y1:pad,x2:x,y2:H-pad,class:"grat"}));
+    s.append(el("text",{x:x,y:H-pad+13,"text-anchor":"middle",class:"gratlbl"},String(lon)+"°"));}
+  for(let lat=30;lat<=50;lat+=10){const y=py(lat);
+    s.append(el("line",{x1:pad,y1:y,x2:W-pad,y2:y,class:"grat"}));
+    s.append(el("text",{x:pad-6,y:y+3,"text-anchor":"end",class:"gratlbl"},String(lat)+"°"));}
+  let hottest=null;
+  (d.stations||[]).forEach(st=>{
+    const x=px(st.lon), y=py(st.lat); const t=st.temp_now;
+    const n=(st.open+st.closed)||1; const r=7+Math.min(9,n*1.4);
+    const pnl=(st.pnl||0)+(st.unrealized||0);
+    s.append(el("circle",{cx:x,cy:y,r:r+3,fill:heat(t),opacity:.18}));
+    s.append(el("circle",{cx:x,cy:y,r:r,fill:heat(t),stroke:"var(--panel)","stroke-width":2}));
+    const g=el("g");
+    g.append(el("text",{x:x,y:y-r-6,"text-anchor":"middle",class:"maplbl"},
+      st.name.split(",")[0]+(t!=null?"  "+t.toFixed(0)+"°":"")));
+    g.append(el("text",{x:x,y:y-r-6+12,"text-anchor":"middle",class:"mapsub"},
+      (pnl>=0?"+$":"−$")+Math.abs(pnl).toFixed(0)+" · "+n+" pos"));
+    s.append(g);
+    if(t!=null&&(hottest==null||t>hottest.t))hottest={t,name:st.name.split(",")[0]};
+  });
+  box.append(s);
+  document.getElementById("maplegend").textContent = hottest? "hottest: "+hottest.name+" "+hottest.t.toFixed(0)+"°" : "";
+}
+
+function renderTemp(d){
+  const box=document.getElementById("temp"); box.innerHTML="";
+  // group positions by station
+  const byst={}; (d.positions||[]).forEach(p=>{(byst[p.icao]=byst[p.icao]||[]).push(p);});
+  const stns=Object.keys(byst).sort();
+  if(!stns.length){box.innerHTML='<div class="empty">No positions yet.</div>';return;}
+  const rowH=52, W=520, padL=64, padR=16, top=6;
+  const s=svg(W, top+stns.length*rowH+18);
+  // global scale
+  let vmin=200,vmax=-200;
+  stns.forEach(ic=>byst[ic].forEach(p=>{
+    [p.lo,p.hi,p.temp_max,p.temp_now,p.realized_high].forEach(v=>{if(v!=null){vmin=Math.min(vmin,v);vmax=Math.max(vmax,v);}});
+  }));
+  vmin=Math.floor(vmin-3); vmax=Math.ceil(vmax+3); if(vmax-vmin<10){vmax=vmin+10;}
+  const sx=v=>padL+(v-vmin)/(vmax-vmin)*(W-padL-padR);
+  // axis ticks
+  const step=(vmax-vmin)>25?10:5;
+  for(let v=Math.ceil(vmin/step)*step; v<=vmax; v+=step){
+    s.append(el("line",{x1:sx(v),y1:top,x2:sx(v),y2:top+stns.length*rowH,class:"grat"}));
+    s.append(el("text",{x:sx(v),y:top+stns.length*rowH+13,"text-anchor":"middle",class:"gratlbl"},v+"°"));
+  }
+  stns.forEach((ic,i)=>{
+    const y=top+i*rowH, cy=y+rowH/2-4, ps=byst[ic];
+    const settled=ps[0].settled;
+    const hi=settled?ps[0].realized_high:ps[0].temp_max;
+    s.append(el("text",{x:0,y:cy+4,class:"maplbl"},ic.replace("K","")));
+    s.append(el("text",{x:0,y:cy+16,class:"mapsub"},settled?"settled":"today"));
+    // bucket bands
+    ps.forEach(p=>{
+      const lo=p.lo==null?vmin:p.lo, hh=p.hi==null?vmax:p.hi;
+      const x1=sx(lo-0.5), x2=sx(hh+0.5);
+      // does our side win if the final lands in this band?
+      const win = p.side==="yes";
+      s.append(el("rect",{x:x1,y:y+8,width:Math.max(2,x2-x1),height:rowH-24,rx:3,
+        fill: win?"var(--pos)":"var(--neg)", opacity:.16}));
+      s.append(el("rect",{x:x1,y:y+8,width:Math.max(2,x2-x1),height:rowH-24,rx:3,
+        fill:"none",stroke:win?"var(--pos)":"var(--neg)","stroke-width":1,opacity:.5}));
+    });
+    // temperature marker (high so far / settled high)
+    if(hi!=null){
+      s.append(el("line",{x1:padL,y1:cy,x2:sx(hi),y2:cy,stroke:heat(hi),"stroke-width":3,"stroke-linecap":"round"}));
+      s.append(el("circle",{cx:sx(hi),cy:cy,r:5,fill:heat(hi),stroke:"var(--panel)","stroke-width":2}));
+      s.append(el("text",{x:sx(hi),y:cy-9,"text-anchor":"middle",class:"maplbl"},hi.toFixed(0)+"°"));
+    }
+  });
+  box.append(s);
+}
+
+function renderMarks(d){
+  const box=document.getElementById("marks"); box.innerHTML="";
+  const open=(d.positions||[]).filter(p=>!p.settled && p.current!=null);
+  if(!open.length){box.innerHTML='<div class="empty">No open positions with a live quote right now. They appear here between entry and settlement.</div>';return;}
+  const rowH=34, W=760, padL=150, padR=90, top=8;
+  const s=svg(W, top+open.length*rowH+22);
+  const sx=v=>padL+v*(W-padL-padR);
+  for(let c=0;c<=1;c+=0.25){ s.append(el("line",{x1:sx(c),y1:top,x2:sx(c),y2:top+open.length*rowH,class:"grat"}));
+    s.append(el("text",{x:sx(c),y:top+open.length*rowH+14,"text-anchor":"middle",class:"gratlbl"},Math.round(c*100)+"¢"));}
+  open.forEach((p,i)=>{
+    const y=top+i*rowH+rowH/2-4; const e=sx(p.entry), c=sx(p.current);
+    const up=p.current>=p.entry; const col=up?"var(--pos)":"var(--neg)";
+    s.append(el("text",{x:0,y:y+4,class:"maplbl"},p.icao.replace("K","")+" "+p.side.toUpperCase()+" "+p.bucket));
+    s.append(el("line",{x1:e,y1:y,x2:c,y2:y,stroke:col,"stroke-width":2}));
+    // arrowhead
+    const dir=up?1:-1;
+    s.append(el("polygon",{points:`${c},${y} ${c-dir*6},${y-4} ${c-dir*6},${y+4}`,fill:col}));
+    s.append(el("circle",{cx:e,cy:y,r:4,fill:"var(--muted)"}));
+    s.append(el("text",{x:W-padR+8,y:y+4,class:"num maplbl",fill:col},money(p.unrealized||0)));
+  });
+  box.append(s);
+}
+
+function renderEquity(d){
+  const box=document.getElementById("equity"); box.innerHTML="";
+  const eq=d.equity||[];
+  if(eq.length<2){box.innerHTML='<div class="empty">Equity curve appears once two or more days have settled.</div>';return;}
+  const W=960,H=200,pad=34,padL=52; const s=svg(W,H);
+  const ys=eq.map(e=>e.cum); let lo=Math.min(0,...ys), hi=Math.max(0,...ys); if(hi-lo<1)hi=lo+1;
+  const X=i=>padL+i/(eq.length-1)*(W-padL-pad);
+  const Y=v=>pad+(1-(v-lo)/(hi-lo))*(H-2*pad);
+  // zero line
+  s.append(el("line",{x1:padL,y1:Y(0),x2:W-pad,y2:Y(0),class:"grat"}));
+  s.append(el("text",{x:padL-6,y:Y(0)+3,"text-anchor":"end",class:"gratlbl"},"$0"));
+  s.append(el("text",{x:padL-6,y:Y(hi)+3,"text-anchor":"end",class:"gratlbl"},"$"+hi.toFixed(0)));
+  const pts=eq.map((e,i)=>`${X(i)},${Y(e.cum)}`).join(" ");
+  // area
+  s.append(el("polygon",{points:`${X(0)},${Y(0)} ${pts} ${X(eq.length-1)},${Y(0)}`,
+    fill:"var(--accent)",opacity:.12}));
+  s.append(el("polyline",{points:pts,fill:"none",stroke:"var(--accent)","stroke-width":2.5,"stroke-linejoin":"round"}));
+  eq.forEach((e,i)=>{ s.append(el("circle",{cx:X(i),cy:Y(e.cum),r:3,fill:"var(--accent)"}));
+    if(i===eq.length-1)s.append(el("text",{x:X(i),y:Y(e.cum)-9,"text-anchor":"end",class:"num maplbl"},money(e.cum))); });
+  eq.forEach((e,i)=>{ if(i%Math.ceil(eq.length/8)===0||i===eq.length-1)
+    s.append(el("text",{x:X(i),y:H-10,"text-anchor":"middle",class:"gratlbl"},e.day.slice(5))); });
+  box.append(s);
+}
+
+function tbl(cols, rows){
+  const t=document.createElement("table");
+  const thead=document.createElement("tr"); cols.forEach(c=>{const th=document.createElement("th");
+    th.textContent=c.h; if(c.r)th.className="r"; thead.appendChild(th);}); t.appendChild(thead);
+  rows.forEach(r=>{const tr=document.createElement("tr"); cols.forEach(c=>{const td=document.createElement("td");
+    if(c.r)td.className="r "+(c.mono?"num":""); else if(c.mono)td.className="num";
+    const v=c.render?c.render(r):r[c.k]; if(v instanceof Node)td.appendChild(v); else td.innerHTML=v==null?"—":v; tr.appendChild(td);}); t.appendChild(tr);});
+  return t;
+}
+const sidePill=p=>`<span class="pill ${p.side}">${p.side.toUpperCase()}</span>`;
+
+function renderTables(d){
+  const open=(d.positions||[]).filter(p=>!p.settled);
+  const closed=(d.positions||[]).filter(p=>p.settled);
+  document.getElementById("opencap").textContent=open.length+" held to settlement";
+  document.getElementById("closedcap").textContent=closed.length+" settled";
+  const ot=document.getElementById("opentab"); ot.innerHTML="";
+  if(!open.length)ot.innerHTML='<div class="empty">None open.</div>';
+  else ot.append(tbl([
+    {h:"Stn",k:"icao",render:p=>p.icao.replace("K","")},
+    {h:"Bucket",k:"bucket"},{h:"Side",render:sidePill},
+    {h:"Entry",r:1,mono:1,render:p=>cents(p.entry)},
+    {h:"Now",r:1,mono:1,render:p=>cents(p.current)},
+    {h:"MtM",r:1,mono:1,render:p=>`<span class="${cls(p.unrealized||0)}">${p.unrealized==null?"—":money(p.unrealized)}</span>`},
+  ], open.slice(0,14)));
+  const ct=document.getElementById("closedtab"); ct.innerHTML="";
+  if(!closed.length)ct.innerHTML='<div class="empty">None settled yet.</div>';
+  else ct.append(tbl([
+    {h:"Stn",k:"icao",render:p=>p.icao.replace("K","")},
+    {h:"Bucket",k:"bucket"},{h:"Side",render:sidePill},
+    {h:"High",r:1,mono:1,render:p=>p.realized_high!=null?p.realized_high.toFixed(0)+"°":"—"},
+    {h:"P&L",r:1,mono:1,render:p=>`<span class="${cls(p.pnl||0)}">${money(p.pnl||0)}</span>`},
+  ], closed.slice(-14).reverse()));
+}
+
+function ago(iso){ const t=Date.parse(iso.replace("Z","Z")); if(isNaN(t))return iso;
+  const m=Math.round((Date.now()-t)/60000); if(m<1)return "just now"; if(m<60)return m+"m ago";
+  const h=Math.floor(m/60); return h+"h "+(m%60)+"m ago"; }
+
+let LAST=null;
+function render(d){
+  LAST=d;
+  document.getElementById("sub").innerHTML=
+    `bankroll <b>$${d.bankroll.toFixed(0)}</b> · stations <b>${(d.active||[]).map(s=>s.replace("K","")).join(" · ")}</b> · paper — no live orders`;
+  document.getElementById("updated").textContent="updated "+ago(d.updated);
+  renderCards(d); renderMap(d); renderTemp(d); renderMarks(d); renderEquity(d); renderTables(d);
+}
+
+async function load(){
+  try{
+    const r=await fetch("./data.json?t="+Date.now(),{cache:"no-store"});
+    if(!r.ok)throw new Error(r.status); render(await r.json());
+  }catch(e){
+    document.getElementById("updated").textContent="data.json not found yet";
+    if(!LAST)document.getElementById("cards").innerHTML=
+      '<div class="empty" style="grid-column:1/-1">Waiting for the first Actions tick to publish data.json…</div>';
+  }
+}
+// theme toggle
+const tb=document.getElementById("theme");
+tb.onclick=()=>{ const cur=document.documentElement.getAttribute("data-theme");
+  const next=cur==="dark"?"light":cur==="light"?"dark":(matchMedia("(prefers-color-scheme:dark)").matches?"light":"dark");
+  document.documentElement.setAttribute("data-theme",next); try{localStorage.setItem("wxtheme",next)}catch(e){} };
+try{const sv=localStorage.getItem("wxtheme"); if(sv)document.documentElement.setAttribute("data-theme",sv);}catch(e){}
+
+load(); setInterval(load,60000);
+setInterval(()=>{ if(LAST)document.getElementById("updated").textContent="updated "+ago(LAST.updated); },30000);
+</script>
+</body>
+</html>
