@@ -33,7 +33,14 @@ MIN_EDGE, KELLY = 0.03, 0.25
 MARKET_TZ = ZoneInfo("America/New_York")
 WINDOW_ET = (10, 16)
 LIVE_LEDGER = paper.LEDGER.parent / "live_ledger.json"
+NOTIFY_FILE = paper.LEDGER.parent / "live_notify.txt"
 DEFAULT_STATIONS = stations.ACTIVE
+
+
+def _write_notify(text):
+    """Stash a phone-notification body for the workflow's ntfy step."""
+    NOTIFY_FILE.write_text(text)
+    print("\n--- notify ---\n" + text)
 
 
 @dataclass
@@ -101,23 +108,40 @@ def preview(plan, spent):
     print("\nPREVIEW ONLY — no orders placed. Set LIVE=1 to submit these for real.")
 
 
-def place(plan, target, led):
+def place(plan, target, led, now_et):
     key = target.isoformat()
     session = kalshi._session()
-    placed = 0
+    placed, failed = [], []
     print(f"\nPLACING {len(plan)} LIVE orders…\n")
     for o in plan:
         try:
-            res = kalshi.place_order(o.ticker, o.side, o.count, o.price, live=True, session=session)
-            status = (res.response or {}).get("order", {}).get("status", "?")
-            print(f"  ✓ {o.icao} {o.side.upper()} {bucket(o)} {o.count}x @ {o.price:.2f} -> {status}")
+            kalshi.place_order(o.ticker, o.side, o.count, o.price, live=True, session=session)
+            print(f"  ✓ {o.icao} {o.side.upper()} {bucket(o)} {o.count}x @ {o.price:.2f}")
             led.add(paper.Fill(o.ticker, o.icao, key, o.side, o.lo, o.hi, o.price, o.count, maker=o.maker))
-            placed += 1
+            placed.append(o)
         except Exception as e:
             print(f"  ✗ {o.icao} {o.side.upper()} {bucket(o)} FAILED: {type(e).__name__}: {e}")
+            failed.append(o)
     led.save()
-    print(f"\nplaced {placed}/{len(plan)} orders (logged to {LIVE_LEDGER.name}). "
-          f"Run `reconcile` to sync the ledger to actual fills.")
+    staked = sum(o.count * o.price for o in placed)
+    print(f"\nplaced {len(placed)}/{len(plan)} orders (${staked:.2f}). Run `reconcile` to sync to actual fills.")
+
+    # rich phone notification
+    byst = {}
+    for o in placed:
+        byst[o.icao] = byst.get(o.icao, 0) + 1
+    L = [f"🟢 {len(placed)}/{len(plan)} orders · ${staked:.0f} staked  ({now_et:%H:%M} ET)"]
+    if byst:
+        L.append("  " + " · ".join(f"{ic.replace('K','')} {n}" for ic, n in sorted(byst.items())))
+    if failed:
+        L.append(f"⚠️ {len(failed)} failed to place")
+    try:
+        bal = kalshi.balance(session=session).get("balance")
+        if bal is not None:
+            L.append(f"💰 balance ${bal/100:,.2f}")
+    except Exception:
+        pass
+    _write_notify("\n".join(L))
 
 
 def reconcile():
@@ -154,7 +178,9 @@ def main(*args):
     if live and not inwin:
         # scheduled at the morning tick; a delayed cron firing off-window should NOT
         # place real orders unattended. Manual dispatch can still preview any time.
-        print("outside 10:00-16:00 ET window — skipping live placement (safety)."); return
+        print("outside 10:00-16:00 ET window — skipping live placement (safety).")
+        _write_notify(f"🕙 {now_et:%H:%M} ET — outside trading window, no live orders placed.")
+        return
     if not inwin:
         print("WARNING: outside the window — preview only; edges are weaker.")
 
@@ -164,9 +190,12 @@ def main(*args):
         spent = sum(o.count * o.price for o in plan)
         print(f"LIVE_MAX_ORDERS={MAX_ORDERS} — capping to the first {MAX_ORDERS} order(s).")
     if not plan:
-        print("no qualifying edges (or caps already reached) — nothing to do."); return
+        print("no qualifying edges (or caps already reached) — nothing to do.")
+        if live:
+            _write_notify(f"🟡 {now_et:%H:%M} ET — no new edge, nothing placed (already hold today's picks or caps hit).")
+        return
     if live:
-        place(plan, target, led)
+        place(plan, target, led, now_et)
     else:
         preview(plan, spent)
 

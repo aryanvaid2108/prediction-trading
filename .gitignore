@@ -11,6 +11,7 @@ __pycache__/
 .cache/afd_signals.json
 # regenerated and deployed by the dashboard workflow each run
 docs/data.json
+.cache/live_notify.txt
 # never commit Kalshi credentials
 .env
 *.pem
