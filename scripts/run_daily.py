@@ -68,7 +68,10 @@ def tick(icaos, now_utc=None):
           f"{'in' if in_window(now_et) else 'out of'} window)  target={target} ---")
 
     led = paper.Ledger()
-    print("settle:", led.settle_due())
+    try:
+        print("settle:", led.settle_due())
+    except Exception as e:
+        print(f"settle failed (non-fatal, will retry next tick): {type(e).__name__}: {e}")
     if not in_window(now_et):
         print("outside trading window — settle only, no new positions")
         print("status:", led.summary())

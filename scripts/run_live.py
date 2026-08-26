@@ -43,6 +43,10 @@ def _write_notify(text):
     """Stash a phone-notification body for the workflow's ntfy step."""
     NOTIFY_FILE.write_text(text)
     print("\n--- notify ---\n" + text)
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")   # run page shows the outcome at a glance
+    if summary:
+        with open(summary, "a") as fh:
+            fh.write("```\n" + text + "\n```\n")
 
 
 @dataclass
@@ -79,9 +83,10 @@ def build_plan(icaos, target, now_utc, led):
             gated = [d for d in cands
                      if q.shift_fn is None
                      or trading.robust_edge(by[d.ticker], d.side, q.shift_fn, ROBUST_DELTA) > 0]
+            # per-station diagnostic — makes every quote auditable from the run log
+            print(f"  {icao}: μ={q.mu:.1f} σ={q.sigma:.2f} obs_max={q.observed_max} "
+                  f"intraday={q.intraday_active} cands={len(cands)} gated={len(gated)}")
             if not gated:
-                if cands:
-                    print(f"  {icao}: {len(cands)} candidate(s) failed the ±{ROBUST_DELTA}° robustness gate")
                 continue
             d = max(gated, key=lambda x: x.ev)
             station_cap = PER_STATION_FRAC * BANKROLL
@@ -242,7 +247,10 @@ def main(*args):
           f"{'in' if inwin else 'OUT OF'} window) target={target} mode={'LIVE' if live else 'PREVIEW'}")
 
     led = paper.Ledger(LIVE_LEDGER)
-    print("settle:", led.settle_due(target))   # realize finished days (CLI) -> dashboard Live tab
+    try:
+        print("settle:", led.settle_due(target))   # realize finished days -> dashboard Live tab
+    except Exception as e:
+        print(f"settle failed (non-fatal, will retry next run): {type(e).__name__}: {e}")
     if live and not inwin:
         # scheduled at the morning tick; a delayed cron firing off-window should NOT
         # place real orders unattended. Manual dispatch can still preview any time.

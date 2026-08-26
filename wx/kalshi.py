@@ -124,30 +124,37 @@ def _signed_headers(method: str, path: str) -> dict:
     }
 
 
+def _get_signed(sub: str, params=None, session=None, timeout: int = 30, retries: int = 3) -> dict:
+    """Signed GET with retry/backoff (reads are safe to retry)."""
+    s = session or _session()
+    last = None
+    for attempt in range(retries):
+        try:
+            r = s.get(f"{BASE}{sub}", params=params,
+                      headers=_signed_headers("GET", f"/trade-api/v2{sub}"), timeout=timeout)
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as e:
+            last = e
+            time.sleep(1.5 * (attempt + 1))
+    raise last
+
+
 def balance(session=None, timeout: int = 30) -> dict:
     """Signed, READ-ONLY account balance. Validates that the keys + signing work
     without touching an order. Returns e.g. {'balance': <cents>}."""
-    s = session or _session()
-    r = s.get(f"{BASE}/portfolio/balance",
-              headers=_signed_headers("GET", "/trade-api/v2/portfolio/balance"), timeout=timeout)
-    r.raise_for_status()
-    return r.json()
+    return _get_signed("/portfolio/balance", session=session, timeout=timeout)
 
 
 def positions(session=None, timeout: int = 30) -> list:
     """Signed, READ-ONLY list of real market positions (ground truth for fills)."""
-    s = session or _session()
-    r = s.get(f"{BASE}/portfolio/positions",
-              headers=_signed_headers("GET", "/trade-api/v2/portfolio/positions"), timeout=timeout)
-    r.raise_for_status()
-    return r.json().get("market_positions", [])
+    return _get_signed("/portfolio/positions", session=session, timeout=timeout).get("market_positions", [])
 
 
 def orders(status: str = None, session=None, timeout: int = 30) -> list:
     """Signed, READ-ONLY list of orders (all pages). status in {resting, canceled,
     executed}. V2 fields: outcome_side (yes/no), book_side (bid/ask), status,
     remaining_count_fp / fill_count_fp, yes_price_dollars / no_price_dollars."""
-    s = session or _session()
     out, cursor = [], None
     for _ in range(50):                       # hard cap; each page is up to 100
         params = {"limit": 100}
@@ -155,10 +162,7 @@ def orders(status: str = None, session=None, timeout: int = 30) -> list:
             params["status"] = status
         if cursor:
             params["cursor"] = cursor
-        r = s.get(f"{BASE}/portfolio/orders", params=params,
-                  headers=_signed_headers("GET", "/trade-api/v2/portfolio/orders"), timeout=timeout)
-        r.raise_for_status()
-        j = r.json()
+        j = _get_signed("/portfolio/orders", params=params, session=session, timeout=timeout)
         out.extend(j.get("orders", []))
         cursor = j.get("cursor")
         if not cursor:
@@ -191,6 +195,10 @@ def place_order(ticker: str, side: str, count: int, price: float,
         v2_side, v2_price = "bid", price
     else:
         v2_side, v2_price = "ask", round(1.0 - price, 2)
+    # Deterministic id, scoped to the UTC hour: a network-retry within the same
+    # tick dedupes server-side (no double fill), while a later tick retrying a
+    # zero-fill IOC gets a fresh id (an all-day id made Kalshi reject it as dup).
+    hour = time.gmtime().tm_hour
     payload = {
         "ticker": ticker,
         "side": v2_side,
@@ -198,13 +206,21 @@ def place_order(ticker: str, side: str, count: int, price: float,
         "price": f"{v2_price:.2f}",
         "time_in_force": time_in_force,
         "self_trade_prevention_type": "taker_at_cross",
-        # deterministic id -> Kalshi dedupes a retried order instead of doubling it
-        "client_order_id": str(uuid.uuid5(uuid.NAMESPACE_URL, f"kw:{ticker}:{side}")),
+        "client_order_id": str(uuid.uuid5(uuid.NAMESPACE_URL, f"kw:{ticker}:{side}:{hour}")),
     }
     if not live:
         return OrderResult(dry_run=True, payload=payload)
     s = session or _session()
-    r = s.post(f"{BASE}/portfolio/events/orders", json=payload,
-               headers=_signed_headers("POST", _ORDERS_PATH), timeout=timeout)
+    last = None
+    for attempt in range(3):                  # retry ONLY network failures; the
+        try:                                  # client_order_id makes it safe
+            r = s.post(f"{BASE}/portfolio/events/orders", json=payload,
+                       headers=_signed_headers("POST", _ORDERS_PATH), timeout=timeout)
+            break
+        except (requests.ConnectionError, requests.Timeout) as e:
+            last = e
+            time.sleep(1.5 * (attempt + 1))
+    else:
+        raise last
     r.raise_for_status()
     return OrderResult(dry_run=False, payload=payload, response=r.json())

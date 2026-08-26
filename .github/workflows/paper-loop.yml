@@ -49,6 +49,7 @@ jobs:
           else
             git add DASHBOARD.md            # refresh the dashboard alongside a real change
             git commit -m "paper tick $(date -u +'%F %H:%MZ')"
+            git pull --rebase origin main
             git push
           fi
 

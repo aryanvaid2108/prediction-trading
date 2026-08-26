@@ -4,20 +4,32 @@ Cross-checks our ASOS reconstruction against the QC'd CLI high/low so we know th
 settlement basis risk (how often, and by how much, they disagree). Near a bucket
 boundary that gap is the difference between winning and losing a contract.
 """
+import time
+
 import pandas as pd
 import requests
 
 CLI_URL = "https://mesonet.agron.iastate.edu/json/cli.py"
 
 
-def fetch_cli(icao: str, year: int, month: int, timeout: int = 30) -> pd.DataFrame:
+def fetch_cli(icao: str, year: int, month: int, timeout: int = 30, retries: int = 3) -> pd.DataFrame:
     """Official CLI high/low per day for a station-month (icao like 'KNYC').
 
     A day can have several CLI products (preliminary + corrected); keep the last,
-    which is the finalized settlement value.
+    which is the finalized settlement value. Retries — this feeds settlement.
     """
-    r = requests.get(CLI_URL, params={"station": icao, "year": year, "month": month}, timeout=timeout)
-    r.raise_for_status()
+    last = None
+    for attempt in range(retries):
+        try:
+            r = requests.get(CLI_URL, params={"station": icao, "year": year, "month": month},
+                             timeout=timeout)
+            r.raise_for_status()
+            break
+        except requests.RequestException as e:
+            last = e
+            time.sleep(2 * (attempt + 1))
+    else:
+        raise last
     rows = [{"day": pd.Timestamp(x["valid"]).date(), "cli_high": x.get("high"), "cli_low": x.get("low")}
             for x in r.json().get("results", [])]
     df = pd.DataFrame(rows)

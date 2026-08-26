@@ -63,5 +63,6 @@ jobs:
             echo "no live ledger change"
           else
             git commit -m "live orders $(date -u +'%F %H:%MZ')"
+            git pull --rebase origin main
             git push
           fi
