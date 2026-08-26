@@ -1,18 +1,20 @@
 # 📈 Paper-trading dashboard
 
-_Updated 2026-08-25 06:58 UTC · bankroll $1000 · stations KNYC · KMDW · KAUS · KLAX · KSFO · no live orders placed_
+_Updated 2026-08-26 16:10 UTC · bankroll $1000 · stations KNYC · KMDW · KAUS · KLAX · KSFO · KDEN · KPHL · no live orders placed_
 
 | Realized P&L | ROI (on stake) | Win rate | Closed | Open | Open stake |
 |---:|---:|---:|---:|---:|---:|
-| **$+80.05** | **+11.0%** | **54%** | 13 | 0 | $0 |
+| **$+80.05** | **+11.0%** | **54%** | 13 | 4 | $265 |
 
 ### By station
 
 | Station | Positions | Open | Closed | Realized P&L |
 |:--|--:|--:|--:|--:|
 | KAUS | 3 | 0 | 3 | $-122.91 |
-| KNYC | 5 | 0 | 5 | $+259.62 |
-| KSFO | 5 | 0 | 5 | $-56.66 |
+| KLAX | 1 | 1 | 0 | $+0.00 |
+| KMDW | 1 | 1 | 0 | $+0.00 |
+| KNYC | 6 | 1 | 5 | $+259.62 |
+| KSFO | 6 | 1 | 5 | $-56.66 |
 
 ### Cumulative realized P&L
 
@@ -22,6 +24,15 @@ xychart-beta
   y-axis "USD"
   line [80.05]
 ```
+
+### Open positions
+
+| Station | Settles | Bucket | Side | Price | Qty | Type |
+|:--|:--|:--|:--|--:|--:|:--|
+| KLAX | 2026-08-26 | 82–83° | YES | $0.02 | 1109 | taker |
+| KMDW | 2026-08-26 | 81–82° | YES | $0.03 | 2452 | taker |
+| KNYC | 2026-08-26 | ≤79° | YES | $0.11 | 909 | taker |
+| KSFO | 2026-08-26 | ≤71° | YES | $0.09 | 773 | taker |
 
 ### Recently settled
 
