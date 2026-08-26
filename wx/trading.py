@@ -6,6 +6,8 @@ in kalshi.py and defaults to dry-run.
 import math
 from dataclasses import dataclass
 
+import numpy as np
+
 from scipy.stats import norm
 
 FEE_RATE = 0.07  # Kalshi taker fee = ceil(0.07 * n * P * (1-P)) dollars
@@ -74,6 +76,21 @@ def maker_price(market: dict, side: str):
 def gaussian_prob(mu: float, sigma: float):
     """A prob_fn(lo, hi) for a Gaussian predictive — the simple EMOS case."""
     return lambda lo, hi: prob_range(mu, sigma, lo, hi)
+
+
+def sample_prob(samples):
+    """A prob_fn(lo, hi) from predictive samples. Settlement is whole degrees, so
+    buckets are evaluated on rounded samples."""
+    rs = np.round(np.asarray(samples, float))
+
+    def prob(lo, hi):
+        m = np.ones(len(rs), dtype=bool)
+        if lo is not None:
+            m &= rs >= lo
+        if hi is not None:
+            m &= rs <= hi
+        return float(m.mean())
+    return prob
 
 
 def floored_gaussian_prob(mu: float, sigma: float, floor: float):

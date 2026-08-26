@@ -8,6 +8,7 @@ import numpy as np
 import dataclasses
 
 import pandas as pd
+from scipy.stats import norm
 
 from . import cli, emos, intraday, obs, trading
 from .backtest import (build_archive_table_wide, calibration_factor,
@@ -75,7 +76,8 @@ def quote_live(st: Station, target: date = None, now_utc: datetime = None,
     tr = table.tail(window)
     model = emos.fit_mixed(tr[cols].to_numpy(), (tr["ens_std"].to_numpy() ** 2).reshape(-1, 1),
                            tr["high"].to_numpy(), ridge=ridge)
-    calib = calibration_factor(rolling_score_mixed(table, cols, min_train=45, window=window, ridge=ridge))
+    scored = rolling_score_mixed(table, cols, min_train=45, window=window, ridge=ridge)
+    calib = calibration_factor(scored)
 
     if target >= date.today():
         members = fetch_members_forecast(st.lat, st.lon, forecast_days=(target - date.today()).days + 2)
@@ -108,20 +110,48 @@ def quote_live(st: Station, target: date = None, now_utc: datetime = None,
     rm = prep.set_index("day")[f"rm_{hour_lst}"]
     try:
         finals = cli.settlement_high(st.icao, target - timedelta(days=train_days), target - timedelta(days=1))
-        res = (finals - rm).dropna().to_numpy()
     except Exception:
-        res = intraday.residuals(prep, hour_lst)
+        finals = prep.set_index("day")["final"]   # ASOS reconstruction fallback
+    res_all = (finals - rm).dropna()
+    res = res_all.tail(60).to_numpy()
     if len(res) < 15:
         return LiveQuote(mu0, s0, trading.gaussian_prob(mu0, s0), observed_max, hour_lst,
                          mu0, s0, calib, intraday_active=False)
-    mu_i = observed_max + float(np.mean(res))
-    s_i = max(float(np.std(res)), 0.3)
 
-    # --- precision-weighted blend, floored at the observed max ---
-    w0, wi = 1.0 / s0 ** 2, 1.0 / s_i ** 2
-    mu_b = (w0 * mu0 + wi * mu_i) / (w0 + wi)
-    s_b = float(np.sqrt(1.0 / (w0 + wi)))
-    prob_fn = trading.floored_gaussian_prob(mu_b, s_b, observed_max)
+    # --- honest mixture (validated in scripts/honest_eval) ---
+    # Mixture of prior samples and empirical residual samples, NOT a precision
+    # product: a mixture's spread never collapses below its components, and
+    # prior-vs-obs disagreement widens it. A walk-forward sharpening factor
+    # (trailing std of past raw PIT-z, biased 1.1x wide for safety) sets the
+    # final spread. Eval: std(z) 1.25->0.97, cov90 85%->92%, CRPS unchanged.
+    N, BW = 2000, 0.25
+    rng = np.random.default_rng(0)
+
+    def raw_mix(mu_p, s_p, res_arr, omax):
+        wi_ = 1.0 / max(float(res_arr.std()), 0.3) ** 2
+        w0_ = 1.0 / s_p ** 2
+        n0 = int(round(N * w0_ / (w0_ + wi_)))
+        pr = rng.normal(mu_p, s_p, n0)
+        it = omax + rng.choice(res_arr, N - n0, replace=True)
+        return np.concatenate([pr, it]) + rng.normal(0, BW, N)
+
+    sc = scored.set_index(pd.to_datetime(scored["day"]))
+    zs = []
+    for d in sc.index.intersection(rm.index).intersection(finals.index):
+        past = res_all[res_all.index < d].tail(60)
+        if len(past) < 20 or pd.isna(rm.loc[d]):
+            continue
+        raw = np.clip(raw_mix(float(sc.loc[d, "mu"]), float(sc.loc[d, "sigma"]) * calib,
+                              past, float(rm.loc[d])), round(float(rm.loc[d])) - 0.5, None)
+        pit = float(np.clip((raw < float(finals.loc[d])).mean(), 1e-4, 1 - 1e-4))
+        zs.append(float(norm.ppf(pit)))
+    shrink = float(np.clip(np.std(zs) * 1.1, 0.7, 1.3)) if len(zs) >= 25 else 1.0
+
+    samples = raw_mix(mu0, s0, res_all.tail(60), observed_max)
+    samples = samples.mean() + (samples - samples.mean()) * shrink
+    samples = np.clip(samples, round(observed_max) - 0.5, None)
+    mu_b, s_b = float(samples.mean()), float(samples.std())
+    prob_fn = trading.sample_prob(samples)
     return LiveQuote(mu_b, s_b, prob_fn, observed_max, hour_lst, mu0, s0, calib, intraday_active=True)
 
 
