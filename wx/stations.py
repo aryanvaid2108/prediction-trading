@@ -28,9 +28,11 @@ STATIONS = {
     "KPHL": Station("KPHL", "KXHIGHPHIL", "PHL", "Philadelphia, PA", 39.8683, -75.2311, -5, "PHI"),
 }
 
-# Stations the live paper loop trades. Settlement source (Kalshi == NWS CLI)
-# verified 13/13 days for all five.
-ACTIVE = ["KNYC", "KMDW", "KAUS", "KLAX", "KSFO"]
+# Stations the loops trade. Settlement parity (Kalshi == NWS CLI) verified 13/13
+# for every entry. DEN + PHL added 2026-08-26 after passing the honest-backtest
+# median gate (DEN +$876/67% win, PHL +$560/46%). KMIA verified 13/13 but BENCHED:
+# median-day -$3.21 / 28% win (longshot profile, like LAX) — retest before adding.
+ACTIVE = ["KNYC", "KMDW", "KAUS", "KLAX", "KSFO", "KDEN", "KPHL"]
 
 
 def get(icao: str) -> Station:
