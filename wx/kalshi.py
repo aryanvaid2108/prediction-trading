@@ -128,15 +128,26 @@ def positions(session=None, timeout: int = 30) -> list:
 
 
 def orders(status: str = None, session=None, timeout: int = 30) -> list:
-    """Signed, READ-ONLY list of orders. status in {resting, canceled, executed}.
-    V2 fields: outcome_side (yes/no), book_side (bid/ask), status,
+    """Signed, READ-ONLY list of orders (all pages). status in {resting, canceled,
+    executed}. V2 fields: outcome_side (yes/no), book_side (bid/ask), status,
     remaining_count_fp / fill_count_fp, yes_price_dollars / no_price_dollars."""
     s = session or _session()
-    params = {"status": status} if status else {}
-    r = s.get(f"{BASE}/portfolio/orders", params=params,
-              headers=_signed_headers("GET", "/trade-api/v2/portfolio/orders"), timeout=timeout)
-    r.raise_for_status()
-    return r.json().get("orders", [])
+    out, cursor = [], None
+    for _ in range(50):                       # hard cap; each page is up to 100
+        params = {"limit": 100}
+        if status:
+            params["status"] = status
+        if cursor:
+            params["cursor"] = cursor
+        r = s.get(f"{BASE}/portfolio/orders", params=params,
+                  headers=_signed_headers("GET", "/trade-api/v2/portfolio/orders"), timeout=timeout)
+        r.raise_for_status()
+        j = r.json()
+        out.extend(j.get("orders", []))
+        cursor = j.get("cursor")
+        if not cursor:
+            break
+    return out
 
 
 @dataclass
