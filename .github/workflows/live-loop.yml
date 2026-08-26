@@ -42,6 +42,10 @@ jobs:
           KALSHI_ACCESS_KEY: ${{ secrets.KALSHI_ACCESS_KEY }}
           KALSHI_PRIVATE_KEY_PATH: /tmp/kalshi.pem
           LIVE: "1"
+          # CANARY while the honest engine earns live history: Kelly sizes against
+          # $150 and total daily stake is capped at $150. Delete this line to
+          # restore the full $750 bankroll.
+          LIVE_BANKROLL: "150"
         run: python -m scripts.run_live
 
       - name: Commit live ledger if it changed
