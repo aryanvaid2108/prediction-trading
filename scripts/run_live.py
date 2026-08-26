@@ -177,6 +177,37 @@ def reconcile():
               f"exposure=${(p.get('market_exposure') or 0)/100:.2f}  "
               f"realized=${(p.get('realized_pnl') or 0)/100:.2f}")
 
+    # --- realized P&L from actual fills vs actual settlements (all our weather bets) ---
+    from datetime import date, timedelta
+    settled = {}
+    for d in (date.today(), date.today() - timedelta(days=1)):
+        for ic in stations.ACTIVE:
+            try:
+                for m in kalshi.markets(get(ic).kalshi, d):
+                    ya, yb = m.get("yes_ask"), m.get("yes_bid")
+                    if ya is not None and yb is not None:
+                        settled[m["ticker"]] = 1.0 if (ya + yb) / 2 >= 0.5 else 0.0
+            except Exception:
+                pass
+    allo = kalshi.orders(status="executed") + kalshi.orders(status="resting")
+    tot = 0.0
+    print("\n--- realized P&L (filled contracts vs settlement) ---")
+    for o in sorted(allo, key=lambda x: x.get("ticker", "")):
+        t = o.get("ticker", "")
+        if t not in settled:
+            continue
+        fill = float(o.get("fill_count_fp") or 0)
+        if fill <= 0:
+            continue
+        os_ = o.get("outcome_side")
+        cost = float((o.get("yes_price_dollars") if os_ == "yes" else o.get("no_price_dollars")) or 0)
+        sy = settled[t]
+        win = (sy >= 0.5) if os_ == "yes" else (sy < 0.5)
+        p = fill * ((1.0 if win else 0.0) - cost)
+        tot += p
+        print(f"  {t:26} {str(os_).upper():3} x{fill:>4.0f} @{cost:.2f}  {'WIN ' if win else 'LOSE'} ${p:+8.2f}")
+    print(f"\n=== REALIZED P&L (gross, pre-fee): ${tot:+.2f} ===")
+
 
 def main(*args):
     args = list(args)
