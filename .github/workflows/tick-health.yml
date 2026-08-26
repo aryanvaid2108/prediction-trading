@@ -23,12 +23,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
-          H=$(date -u +%H)
-          case "$H" in
-            15) DUE="14:30" ;;
-            17) DUE="17:10" ;;
-            *)  DUE="18:40" ;;
-          esac
+          # pick the most recent tick that is already due (robust to GitHub
+          # delaying this check into a different hour — a wrong mapping once
+          # caused a spurious dispatch)
+          NOW=$(date -u +%H%M)
+          if   [ "$NOW" -ge 1905 ]; then DUE="18:40"
+          elif [ "$NOW" -ge 1735 ]; then DUE="17:10"
+          else DUE="14:30"
+          fi
           SINCE=$(date -u +"%Y-%m-%dT${DUE}:00Z" -d "-2 minutes" 2>/dev/null || date -u +"%Y-%m-%dT${DUE}:00Z")
           N=$(gh run list -R "$GITHUB_REPOSITORY" --workflow live-loop.yml \
                 --created ">$SINCE" --json databaseId -q 'length')
