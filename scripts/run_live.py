@@ -29,7 +29,9 @@ BANKROLL = float(os.environ.get("LIVE_BANKROLL", "750"))
 MAX_TOTAL_STAKE = float(os.environ.get("LIVE_MAX_STAKE", str(BANKROLL)))  # combined cap
 PER_STATION_FRAC = float(os.environ.get("LIVE_STATION_FRAC", "0.25"))     # diversify
 MAX_ORDERS = int(os.environ.get("LIVE_MAX_ORDERS") or "0")                # 0 = unlimited (smoke-test with 1)
-MIN_EDGE, KELLY = 0.03, 0.25
+MIN_EDGE = float(os.environ.get("LIVE_MIN_EDGE", "0.05"))  # above measured calibration slack
+KELLY = 0.25
+ROBUST_DELTA = 1.5   # edge must survive the mean being off by this many °F
 MARKET_TZ = ZoneInfo("America/New_York")
 WINDOW_ET = (10, 16)
 LIVE_LEDGER = paper.LEDGER.parent / "live_ledger.json"
@@ -56,27 +58,40 @@ class Order:
 
 
 def build_plan(icaos, target, now_utc, led):
-    """The full model order set — ledger-aware so repeated runs never double-buy a
-    held bucket or stake past the per-station / total caps for the day."""
+    """ONE robust thesis per station per day.
+
+    A station that already holds any position today is skipped (no bucket
+    stacking, no YES-low+NO-high double-hits — one directional error can only
+    cost one bet). Candidates must clear min_edge AND keep positive edge with
+    the predictive mean shifted ±ROBUST_DELTA (a bet that dies from a 1.5° miss
+    isn't a bet). The single highest-EV survivor is taken."""
     key = target.isoformat()
     plan = []
     for icao in icaos:
         try:
             st = get(icao)
-            held = led.held_markets(st.icao, key)                     # skip what we already hold
-            station_left = PER_STATION_FRAC * BANKROLL - led.staked_on(st.icao, key)
-            if station_left < 1:
+            if led.has_positions(st.icao, key):                       # one thesis per day
                 continue
             q = pipeline.quote_live(st, target, now_utc=now_utc)
             ms = kalshi.markets(st.kalshi, target)
             by = {m["ticker"]: m for m in ms}
-            fresh = [d for d in trading.decisions_for(ms, q.prob_fn, BANKROLL, min_edge=MIN_EDGE, kelly_frac=KELLY)
-                     if (d.ticker, d.side) not in held]
-            for d in trading.cap_exposure(fresh, station_left):
-                m = by[d.ticker]
-                lo, hi = trading.market_bounds(m["strike_type"], m.get("floor"), m.get("cap"))
-                # taker price (the ask decide() approved) — placed marketable/IOC so it fills now
-                plan.append(Order(icao, d.ticker, d.side, lo, hi, d.price, d.count, maker=False))
+            cands = trading.decisions_for(ms, q.prob_fn, BANKROLL, min_edge=MIN_EDGE, kelly_frac=KELLY)
+            gated = [d for d in cands
+                     if q.shift_fn is None
+                     or trading.robust_edge(by[d.ticker], d.side, q.shift_fn, ROBUST_DELTA) > 0]
+            if not gated:
+                if cands:
+                    print(f"  {icao}: {len(cands)} candidate(s) failed the ±{ROBUST_DELTA}° robustness gate")
+                continue
+            d = max(gated, key=lambda x: x.ev)
+            station_cap = PER_STATION_FRAC * BANKROLL
+            if d.count * d.price > station_cap:
+                d.count = int(station_cap / d.price)
+            if d.count < 1:
+                continue
+            m = by[d.ticker]
+            lo, hi = trading.market_bounds(m["strike_type"], m.get("floor"), m.get("cap"))
+            plan.append(Order(icao, d.ticker, d.side, lo, hi, d.price, d.count, maker=False))
         except Exception:
             print(f"  {icao}: ERROR\n{traceback.format_exc()}")
     # global cap across all stations, net of what is already staked live today

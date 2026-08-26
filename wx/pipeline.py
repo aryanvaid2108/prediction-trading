@@ -57,6 +57,7 @@ class LiveQuote:
     sigma_prior: float
     calib: float         # sigma inflation applied to the prior
     intraday_active: bool
+    shift_fn: object = None   # shift_fn(d) -> prob_fn with the mean moved by d° (robustness gate)
 
 
 def quote_live(st: Station, target: date = None, now_utc: datetime = None,
@@ -99,7 +100,8 @@ def quote_live(st: Station, target: date = None, now_utc: datetime = None,
 
     if observed_max is None:
         return LiveQuote(mu0, s0, trading.gaussian_prob(mu0, s0), None, hour_lst,
-                         mu0, s0, calib, intraday_active=False)
+                         mu0, s0, calib, intraday_active=False,
+                         shift_fn=lambda d: trading.gaussian_prob(mu0 + d, s0))
 
     # --- intraday residual model for the current hour ---
     # Residual targets the official CLI high, so the intraday path carries the same
@@ -116,7 +118,8 @@ def quote_live(st: Station, target: date = None, now_utc: datetime = None,
     res = res_all.tail(60).to_numpy()
     if len(res) < 15:
         return LiveQuote(mu0, s0, trading.gaussian_prob(mu0, s0), observed_max, hour_lst,
-                         mu0, s0, calib, intraday_active=False)
+                         mu0, s0, calib, intraday_active=False,
+                         shift_fn=lambda d: trading.gaussian_prob(mu0 + d, s0))
 
     # --- honest mixture (validated in scripts/honest_eval) ---
     # Mixture of prior samples and empirical residual samples, NOT a precision
@@ -152,7 +155,8 @@ def quote_live(st: Station, target: date = None, now_utc: datetime = None,
     samples = np.clip(samples, round(observed_max) - 0.5, None)
     mu_b, s_b = float(samples.mean()), float(samples.std())
     prob_fn = trading.sample_prob(samples)
-    return LiveQuote(mu_b, s_b, prob_fn, observed_max, hour_lst, mu0, s0, calib, intraday_active=True)
+    return LiveQuote(mu_b, s_b, prob_fn, observed_max, hour_lst, mu0, s0, calib, intraday_active=True,
+                     shift_fn=lambda d, _s=samples: trading.sample_prob(_s + d))
 
 
 def widen_for_afd(q: LiveQuote, st: Station, target: date) -> LiveQuote:

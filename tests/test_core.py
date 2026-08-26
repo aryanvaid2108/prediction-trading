@@ -180,3 +180,24 @@ def test_lst_binning_crosses_local_midnight():
     by_day = dict(zip(highs["day"].astype(str), highs["high"]))
     assert by_day["2026-01-01"] == 95
     assert by_day["2026-01-02"] == 40
+
+
+def test_sample_prob_rounds_to_settlement_degrees():
+    import numpy as np
+    p = trading.sample_prob(np.array([78.4, 78.6, 79.2, 80.9, 81.1]))
+    assert p(78, 79) == 0.6      # 78, 79, 79
+    assert p(81, None) == 0.4    # 81, 81
+    assert p(None, 77) == 0.0
+
+
+def test_robust_edge_kills_boundary_bets():
+    import numpy as np
+    rng = np.random.default_rng(0)
+    samples = rng.normal(79.0, 1.0, 4000)
+    shift = lambda d: trading.sample_prob(samples + d)
+    m = {"strike_type": "between", "floor": 78, "cap": 79,
+         "yes_ask": 0.30, "no_ask": 0.75}
+    # at face value the YES bet looks attractive (p≈0.47 vs 0.30)...
+    assert trading.sample_prob(samples)(78, 79) - 0.30 > 0.10
+    # ...but a ±1.5° mean miss flips it negative -> the gate must reject it
+    assert trading.robust_edge(m, "yes", shift, 1.5) < 0

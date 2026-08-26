@@ -19,7 +19,9 @@ from wx import kalshi, paper, pipeline, stations, trading
 from wx.stations import get
 
 BANKROLL = 1000.0
-MAX_TOTAL_FRAC = 0.25            # cap on cumulative daily stake per station
+MAX_TOTAL_FRAC = 0.25            # cap on daily stake per station
+MIN_EDGE = 0.05                  # above measured calibration slack (mirrors live)
+ROBUST_DELTA = 1.5               # edge must survive a ±1.5° mean miss (mirrors live)
 DEFAULT_STATIONS = stations.ACTIVE
 MARKET_TZ = ZoneInfo("America/New_York")
 WINDOW_ET = (10, 16)            # record only 10:00-15:59 ET (intraday-active, sharp)
@@ -31,26 +33,31 @@ def in_window(now_et) -> bool:
 
 
 def record_station(led: paper.Ledger, icao: str, target, now_utc):
+    """ONE robust thesis per station per day (mirrors the live strategy exactly:
+    no bucket stacking, ±1.5° robustness gate, taker pricing like the IOC path)."""
     st = get(icao)
     key = target.isoformat()
-    remaining = MAX_TOTAL_FRAC * BANKROLL - led.staked_on(st.icao, key)
     q = pipeline.quote_live(st, target, now_utc=now_utc)
-    if remaining < 1:
+    if led.has_positions(st.icao, key):
         return 0, q
     ms = kalshi.markets(st.kalshi, target)
     by = {m["ticker"]: m for m in ms}
-    held = led.held_markets(st.icao, key)
-    fresh = [d for d in trading.decisions_for(ms, q.prob_fn, BANKROLL, min_edge=0.03, kelly_frac=0.25)
-             if (d.ticker, d.side) not in held]
-    added = 0
-    for d in trading.cap_exposure(fresh, remaining):
-        m = by[d.ticker]
-        lo, hi = trading.market_bounds(m["strike_type"], m.get("floor"), m.get("cap"))
-        mk = trading.maker_price(m, d.side)
-        price, maker = (mk, True) if mk else (d.price, False)
-        led.add(paper.Fill(d.ticker, st.icao, key, d.side, lo, hi, price, d.count, maker=maker))
-        added += 1
-    return added, q
+    cands = trading.decisions_for(ms, q.prob_fn, BANKROLL, min_edge=MIN_EDGE, kelly_frac=0.25)
+    gated = [d for d in cands
+             if q.shift_fn is None
+             or trading.robust_edge(by[d.ticker], d.side, q.shift_fn, ROBUST_DELTA) > 0]
+    if not gated:
+        return 0, q
+    d = max(gated, key=lambda x: x.ev)
+    cap = MAX_TOTAL_FRAC * BANKROLL
+    if d.count * d.price > cap:
+        d.count = int(cap / d.price)
+    if d.count < 1:
+        return 0, q
+    m = by[d.ticker]
+    lo, hi = trading.market_bounds(m["strike_type"], m.get("floor"), m.get("cap"))
+    led.add(paper.Fill(d.ticker, st.icao, key, d.side, lo, hi, d.price, d.count, maker=False))
+    return 1, q
 
 
 def tick(icaos, now_utc=None):

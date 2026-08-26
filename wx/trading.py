@@ -148,6 +148,23 @@ def decisions_for(markets, prob_fn, bankroll: float, **kw):
     return [d for d in (decide(m, prob_fn, bankroll, **kw) for m in markets) if d]
 
 
+def robust_edge(market: dict, side: str, shift_fn, delta: float = 1.5) -> float:
+    """Worst-case edge if the predictive mean is off by ±delta degrees.
+
+    shift_fn(d) -> prob_fn under a mean shifted by d. A bet that dies from a
+    1.5° miss (well inside our error bar) shouldn't be placed at all."""
+    lo, hi = market_bounds(market["strike_type"], market.get("floor"), market.get("cap"))
+    worst = float("inf")
+    for d in (-delta, delta):
+        p = shift_fn(d)(lo, hi)
+        pw = p if side == "yes" else 1 - p
+        ask = market.get("yes_ask") if side == "yes" else market.get("no_ask")
+        if ask is None:
+            return float("-inf")
+        worst = min(worst, pw - ask)
+    return worst
+
+
 def cap_exposure(decisions, budget_dollars: float):
     """Keep the highest-EV decisions that fit a dollar budget, scaling the last."""
     kept, spent = [], 0.0
