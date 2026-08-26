@@ -66,6 +66,22 @@ def markets(series: str, day: date, session=None, timeout: int = 30, retries: in
     raise last
 
 
+def market(ticker: str, session=None, timeout: int = 30, retries: int = 4):
+    """A single market by ticker — returns even settled/finalized markets (with
+    'result'), unlike the event listing which can drop them."""
+    s = session or _session()
+    last = None
+    for attempt in range(retries):
+        try:
+            r = s.get(f"{BASE}/markets/{ticker}", timeout=timeout)
+            r.raise_for_status()
+            return _norm(r.json()["market"])
+        except requests.RequestException as e:
+            last = e
+            time.sleep(1.0 * (attempt + 1))
+    raise last
+
+
 def candlesticks(series: str, ticker: str, start_ts: int, end_ts: int,
                  interval: int = 60, session=None, timeout: int = 30):
     """Historical OHLC candles for a market (yes_bid/yes_ask/price per interval)."""

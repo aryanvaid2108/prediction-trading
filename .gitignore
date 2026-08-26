@@ -12,6 +12,7 @@ __pycache__/
 # regenerated and deployed by the dashboard workflow each run
 docs/data.json
 .cache/live_notify.txt
+.cache/pnl_notify.txt
 # never commit Kalshi credentials
 .env
 *.pem
