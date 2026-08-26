@@ -48,12 +48,30 @@ def compute(target: date):
                 mcache[t] = kalshi.market(t, session=session)
             except Exception:
                 mcache[t] = None
-        res = (mcache[t] or {}).get("result")
-        if res not in ("yes", "no"):
-            continue                                          # not settled yet
+        m = mcache[t]
+        if not m:
+            continue
+        # settled YES value: prefer the result field, else the pinned price (Kalshi
+        # leaves result empty and status 'active' for a while after the price settles)
+        res = m.get("result")
+        if res == "yes":
+            sy = 1.0
+        elif res == "no":
+            sy = 0.0
+        else:
+            ya, yb = m.get("yes_ask"), m.get("yes_bid")
+            if ya is None or yb is None:
+                continue
+            mid = (ya + yb) / 2
+            if mid <= 0.03:
+                sy = 0.0
+            elif mid >= 0.97:
+                sy = 1.0
+            else:
+                continue                                       # not resolved yet
         side = o.get("outcome_side")
         cost = float((o.get("yes_price_dollars") if side == "yes" else o.get("no_price_dollars")) or 0)
-        win = (res == "yes") if side == "yes" else (res == "no")
+        win = (sy >= 0.5) if side == "yes" else (sy < 0.5)
         gross = round(fill * ((1.0 if win else 0.0) - cost), 2)
         fee = trading.fee(cost, int(fill))
         rows.append({"icao": s2i[pref], "side": side, "fill": int(fill), "cost": cost,
