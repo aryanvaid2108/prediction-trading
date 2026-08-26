@@ -46,6 +46,7 @@ def _norm(m: dict) -> dict:
         "volume": m.get("volume_fp"),
         "subtitle": m.get("yes_sub_title", ""),
         "status": m.get("status"),
+        "result": m.get("result"),   # 'yes'/'no' once settled
     }
 
 

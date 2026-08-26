@@ -184,6 +184,10 @@ def reconcile():
         for ic in stations.ACTIVE:
             try:
                 for m in kalshi.markets(get(ic).kalshi, d):
+                    r = m.get("result")
+                    if r in ("yes", "no"):
+                        settled[m["ticker"]] = 1.0 if r == "yes" else 0.0
+                        continue
                     ya, yb = m.get("yes_ask"), m.get("yes_bid")
                     if ya is not None and yb is not None:
                         settled[m["ticker"]] = 1.0 if (ya + yb) / 2 >= 0.5 else 0.0
