@@ -1,0 +1,45 @@
+name: tick-health
+
+# GitHub cron silently skips/delays scheduled runs. This watchdog fires ~35min
+# after each expected live-loop tick; if no run started since the tick was due,
+# it re-dispatches live-loop and pings the phone. Self-healing scheduling
+# without leaving GitHub.
+on:
+  schedule:
+    - cron: "5 15 * * *"    # checks the 14:30Z morning tick
+    - cron: "45 17 * * *"   # checks the 17:10Z midday tick
+    - cron: "15 19 * * *"   # checks the 18:40Z afternoon tick
+  workflow_dispatch: {}
+
+permissions:
+  actions: write            # to re-dispatch live-loop
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify the expected tick ran; redispatch if missed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          H=$(date -u +%H)
+          case "$H" in
+            15) DUE="14:30" ;;
+            17) DUE="17:10" ;;
+            *)  DUE="18:40" ;;
+          esac
+          SINCE=$(date -u +"%Y-%m-%dT${DUE}:00Z" -d "-2 minutes" 2>/dev/null || date -u +"%Y-%m-%dT${DUE}:00Z")
+          N=$(gh run list -R "$GITHUB_REPOSITORY" --workflow live-loop.yml \
+                --created ">$SINCE" --json databaseId -q 'length')
+          echo "runs since $SINCE: $N"
+          if [ "$N" -gt 0 ]; then
+            echo "tick ran — healthy"; exit 0
+          fi
+          echo "tick MISSED — redispatching live-loop"
+          gh workflow run live-loop.yml -R "$GITHUB_REPOSITORY"
+          if [ -n "$NTFY_TOPIC" ]; then
+            curl -s -H "Title: tick-health" -H "Tags: warning" \
+              -d "⏰ live-loop ${DUE}Z tick was skipped by GitHub cron — auto-redispatched." \
+              "https://ntfy.sh/$NTFY_TOPIC" > /dev/null
+          fi
