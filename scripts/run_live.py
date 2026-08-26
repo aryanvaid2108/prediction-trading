@@ -242,6 +242,7 @@ def main(*args):
           f"{'in' if inwin else 'OUT OF'} window) target={target} mode={'LIVE' if live else 'PREVIEW'}")
 
     led = paper.Ledger(LIVE_LEDGER)
+    print("settle:", led.settle_due(target))   # realize finished days (CLI) -> dashboard Live tab
     if live and not inwin:
         # scheduled at the morning tick; a delayed cron firing off-window should NOT
         # place real orders unattended. Manual dispatch can still preview any time.

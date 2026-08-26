@@ -22,7 +22,8 @@ from wx import backtest, cli, intraday, kalshi, obs, stations, trading
 
 BANKROLL = 750.0
 MIN_EDGE, KELLY, ROBUST_DELTA = 0.05, 0.25, 1.5
-TICKS_UTC = [15, 17, 19]
+import os
+TICKS_UTC = [int(h) for h in os.environ.get("TICKS", "15,17,19").split(",")]
 MAXC = 300                      # crude liquidity cap per order
 N_MIX, BW = 2000, 0.25
 CACHE = Path(__file__).resolve().parent.parent / ".cache" / "candles_full.json"
