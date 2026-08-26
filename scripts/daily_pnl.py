@@ -32,7 +32,10 @@ def compute(target: date):
     s2i = _series_to_icao()
     series = set(s2i)
     dp = _datepart(target)
-    orders = kalshi.orders(status="executed") + kalshi.orders(status="resting")
+    # canceled too: an IOC order fills instantly then cancels its remainder, so a
+    # fully-filled market order lands in 'canceled' with fill_count > 0.
+    orders = (kalshi.orders(status="executed") + kalshi.orders(status="resting")
+              + kalshi.orders(status="canceled"))
     session = kalshi._session()
     mcache, rows = {}, []
     for o in orders:
