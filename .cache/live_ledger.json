@@ -9,8 +9,8 @@
     "price": 0.16,
     "count": 276,
     "maker": true,
-    "realized": null,
-    "pnl": null
+    "realized": 81.0,
+    "pnl": -44.16
   },
   {
     "ticker": "KXHIGHCHI-26AUG25-B80.5",
@@ -22,8 +22,8 @@
     "price": 0.39,
     "count": 96,
     "maker": true,
-    "realized": null,
-    "pnl": null
+    "realized": 81.0,
+    "pnl": -37.44
   },
   {
     "ticker": "KXHIGHCHI-26AUG25-B82.5",
@@ -35,8 +35,8 @@
     "price": 0.8,
     "count": 92,
     "maker": true,
-    "realized": null,
-    "pnl": null
+    "realized": 81.0,
+    "pnl": 18.4
   },
   {
     "ticker": "KXHIGHAUS-26AUG25-B101.5",
@@ -48,8 +48,8 @@
     "price": 0.29,
     "count": 250,
     "maker": true,
-    "realized": null,
-    "pnl": null
+    "realized": 103.0,
+    "pnl": -72.5
   },
   {
     "ticker": "KXHIGHAUS-26AUG25-B103.5",
@@ -61,8 +61,8 @@
     "price": 0.32,
     "count": 227,
     "maker": true,
-    "realized": null,
-    "pnl": null
+    "realized": 103.0,
+    "pnl": -72.64
   },
   {
     "ticker": "KXHIGHLAX-26AUG25-B83.5",
@@ -74,8 +74,8 @@
     "price": 0.14,
     "count": 500,
     "maker": true,
-    "realized": null,
-    "pnl": null
+    "realized": 85.0,
+    "pnl": -70.0
   },
   {
     "ticker": "KXHIGHLAX-26AUG25-B85.5",
@@ -87,8 +87,8 @@
     "price": 0.39,
     "count": 129,
     "maker": true,
-    "realized": null,
-    "pnl": null
+    "realized": 85.0,
+    "pnl": -50.31
   },
   {
     "ticker": "KXHIGHLAX-26AUG25-B87.5",
@@ -100,8 +100,8 @@
     "price": 0.8,
     "count": 75,
     "maker": true,
-    "realized": null,
-    "pnl": null
+    "realized": 85.0,
+    "pnl": 15.0
   },
   {
     "ticker": "KXHIGHTSFO-26AUG25-B70.5",
@@ -113,8 +113,8 @@
     "price": 0.36,
     "count": 62,
     "maker": true,
-    "realized": null,
-    "pnl": null
+    "realized": 68.0,
+    "pnl": -22.32
   },
   {
     "ticker": "KXHIGHNY-26AUG25-B79.5",
@@ -126,8 +126,8 @@
     "price": 0.89,
     "count": 84,
     "maker": false,
-    "realized": null,
-    "pnl": null
+    "realized": 78.0,
+    "pnl": 8.66
   },
   {
     "ticker": "KXHIGHNY-26AUG25-T79",
@@ -139,8 +139,8 @@
     "price": 0.89,
     "count": 84,
     "maker": false,
-    "realized": null,
-    "pnl": null
+    "realized": 78.0,
+    "pnl": 8.66
   },
   {
     "ticker": "KXHIGHTSFO-26AUG25-B72.5",
@@ -152,8 +152,8 @@
     "price": 0.2,
     "count": 80,
     "maker": false,
-    "realized": null,
-    "pnl": null
+    "realized": 68.0,
+    "pnl": -16.9
   },
   {
     "ticker": "KXHIGHTSFO-26AUG25-B68.5",
@@ -164,6 +164,45 @@
     "hi": 69.0,
     "price": 0.26,
     "count": 84,
+    "maker": false,
+    "realized": 68.0,
+    "pnl": 61.02
+  },
+  {
+    "ticker": "KXHIGHNY-26AUG26-T80",
+    "icao": "KNYC",
+    "target": "2026-08-26",
+    "side": "yes",
+    "lo": null,
+    "hi": 79,
+    "price": 0.13,
+    "count": 93,
+    "maker": false,
+    "realized": null,
+    "pnl": null
+  },
+  {
+    "ticker": "KXHIGHCHI-26AUG26-B81.5",
+    "icao": "KMDW",
+    "target": "2026-08-26",
+    "side": "yes",
+    "lo": 81.0,
+    "hi": 82.0,
+    "price": 0.02,
+    "count": 448,
+    "maker": false,
+    "realized": null,
+    "pnl": null
+  },
+  {
+    "ticker": "KXHIGHTSFO-26AUG26-T72",
+    "icao": "KSFO",
+    "target": "2026-08-26",
+    "side": "yes",
+    "lo": null,
+    "hi": 71,
+    "price": 0.09,
+    "count": 100,
     "maker": false,
     "realized": null,
     "pnl": null
