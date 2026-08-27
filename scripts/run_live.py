@@ -72,7 +72,7 @@ def risk_gate(led, target, loss_cap=None, resume=None):
     """(ok, reason) — refuse to place when the most recent settled day lost more
     than the cap. A bad day means either the model or the accounting broke;
     an explicit LIVE_RESUME=1 dispatch trades immediately, and the block expires
-    after 3 days so a no-trade streak can't deadlock the loop forever.
+    after one day: a breach costs its next trading day, not the whole week.
     """
     loss_cap = DAILY_LOSS_CAP if loss_cap is None else loss_cap
     resume = os.environ.get("LIVE_RESUME") == "1" if resume is None else resume
@@ -85,7 +85,7 @@ def risk_gate(led, target, loss_cap=None, resume=None):
     if not days:
         return True, "no settled history"
     last = max(days)
-    stale = (target - date.fromisoformat(last)).days > 3
+    stale = (target - date.fromisoformat(last)).days > 1
     if days[last] <= -loss_cap and not stale:
         return False, f"last settled day {last} lost ${-days[last]:.2f} (cap ${loss_cap:.0f})"
     return True, f"last settled day {last}: ${days[last]:+.2f}" + (" (breach expired)" if stale and days[last] <= -loss_cap else "")
