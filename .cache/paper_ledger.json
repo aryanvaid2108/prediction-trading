@@ -10,7 +10,10 @@
     "count": 227,
     "maker": true,
     "realized": 79.0,
-    "pnl": 129.39
+    "pnl": 129.39,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHNY-26AUG24-B78.5",
@@ -23,7 +26,10 @@
     "count": 249,
     "maker": true,
     "realized": 79.0,
-    "pnl": 151.89
+    "pnl": 151.89,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHNY-26AUG24-T78",
@@ -36,7 +42,10 @@
     "count": 608,
     "maker": true,
     "realized": 79.0,
-    "pnl": -12.16
+    "pnl": -12.16,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHNY-26AUG24-B82.5",
@@ -49,7 +58,10 @@
     "count": 33,
     "maker": true,
     "realized": 79.0,
-    "pnl": 1.98
+    "pnl": 1.98,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHTSFO-26AUG24-B71.5",
@@ -62,7 +74,10 @@
     "count": 159,
     "maker": true,
     "realized": 73.0,
-    "pnl": -63.6
+    "pnl": -63.6,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHTSFO-26AUG24-B69.5",
@@ -75,7 +90,10 @@
     "count": 134,
     "maker": true,
     "realized": 73.0,
-    "pnl": -14.74
+    "pnl": -14.74,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHTSFO-26AUG24-T69",
@@ -88,7 +106,10 @@
     "count": 107,
     "maker": true,
     "realized": 73.0,
-    "pnl": 8.56
+    "pnl": 8.56,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHTSFO-26AUG24-B75.5",
@@ -101,7 +122,10 @@
     "count": 74,
     "maker": true,
     "realized": 73.0,
-    "pnl": 5.92
+    "pnl": 5.92,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHAUS-26AUG24-B102.5",
@@ -114,7 +138,10 @@
     "count": 588,
     "maker": true,
     "realized": 104.0,
-    "pnl": -88.2
+    "pnl": -88.2,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHAUS-26AUG24-B104.5",
@@ -127,7 +154,10 @@
     "count": 169,
     "maker": true,
     "realized": 104.0,
-    "pnl": -52.39
+    "pnl": -52.39,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHAUS-26AUG24-B106.5",
@@ -140,7 +170,10 @@
     "count": 104,
     "maker": true,
     "realized": 104.0,
-    "pnl": 17.68
+    "pnl": 17.68,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHTSFO-26AUG24-B73.5",
@@ -153,7 +186,10 @@
     "count": 12,
     "maker": true,
     "realized": 73.0,
-    "pnl": 7.2
+    "pnl": 7.2,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHNY-26AUG24-B80.5",
@@ -166,7 +202,10 @@
     "count": 28,
     "maker": true,
     "realized": 79.0,
-    "pnl": -11.48
+    "pnl": -11.48,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHNY-26AUG26-T80",
@@ -178,8 +217,11 @@
     "price": 0.11,
     "count": 909,
     "maker": false,
-    "realized": null,
-    "pnl": null
+    "realized": 81.0,
+    "pnl": -106.22,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHCHI-26AUG26-B81.5",
@@ -191,8 +233,11 @@
     "price": 0.03,
     "count": 2452,
     "maker": false,
-    "realized": null,
-    "pnl": null
+    "realized": 85.0,
+    "pnl": -78.56,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHLAX-26AUG26-B82.5",
@@ -204,8 +249,11 @@
     "price": 0.02,
     "count": 1109,
     "maker": false,
-    "realized": null,
-    "pnl": null
+    "realized": 87.0,
+    "pnl": -23.71,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHTSFO-26AUG26-T72",
@@ -217,7 +265,10 @@
     "price": 0.09,
     "count": 773,
     "maker": false,
-    "realized": null,
-    "pnl": null
+    "realized": 77.0,
+    "pnl": -74.01,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   }
 ]
