@@ -53,6 +53,28 @@ class IntradayModel:
         return float((1 - norm.cdf((t - self.samples(observed_max)) / self.bw)).mean())
 
 
+def flow_pool(res_all: pd.Series, climbs: pd.Series, today_climb: float,
+              min_n: int = 15) -> pd.Series:
+    """Residuals restricted to days whose morning→cutoff warming matched today's.
+
+    The unconditional pool is climatological: on a fast-warming day it leaves
+    real mass on "the climb stops early", which is how every Aug 26 live bet
+    ended up on the cold side. Conditioning on the climb tercile keeps the
+    mixture honest about days like today. Falls back to the full pool whenever
+    the tercile is too thin to trust (or the climb is unknown)."""
+    d = pd.concat([res_all.rename("res"), climbs.rename("climb")], axis=1).dropna()
+    if len(d) < 3 * min_n or today_climb is None or pd.isna(today_climb):
+        return res_all.dropna()
+    q1, q2 = d["climb"].quantile([1 / 3, 2 / 3])
+    if today_climb <= q1:
+        sel = d[d["climb"] <= q1]
+    elif today_climb >= q2:
+        sel = d[d["climb"] >= q2]
+    else:
+        sel = d[(d["climb"] > q1) & (d["climb"] < q2)]
+    return sel["res"] if len(sel) >= min_n else res_all.dropna()
+
+
 def residuals(table: pd.DataFrame, hour: int) -> np.ndarray:
     col = f"rm_{hour}"
     d = table.dropna(subset=["final", col])

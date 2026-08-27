@@ -26,6 +26,9 @@ class Fill:
     maker: bool = False
     realized: float = None   # filled in at settlement
     pnl: float = None
+    fee: float = None        # total dollars of fees actually paid at fill (None = estimate)
+    p_model: float = None    # raw model P(side wins) at decision time — calibration ledger
+    p_market: float = None   # market mid for the side at decision time
 
 
 def settle_pnl(f: Fill, realized_high: float) -> float:
@@ -34,7 +37,7 @@ def settle_pnl(f: Fill, realized_high: float) -> float:
                  (f.hi is None or realized_high <= f.hi))
     win = in_bucket if f.side == "yes" else not in_bucket
     gross = f.count * (1 - f.price) if win else -f.count * f.price
-    charge = 0.0 if f.maker else trading.fee(f.price, f.count)
+    charge = f.fee if f.fee is not None else (0.0 if f.maker else trading.fee(f.price, f.count))
     return round(gross - charge, 2)
 
 

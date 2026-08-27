@@ -1,5 +1,6 @@
 """Glue: train Mixed EMOS and produce a calibrated (mu, sigma) for a target day,
 optionally sharpened intraday by the temperatures already observed today."""
+import os
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 
@@ -106,8 +107,9 @@ def quote_live(st: Station, target: date = None, now_utc: datetime = None,
     # --- intraday residual model for the current hour ---
     # Residual targets the official CLI high, so the intraday path carries the same
     # settlement basis as the forecast prior (both trained on CLI, not raw ASOS).
+    EARLY = 9   # LST hour anchoring the warming-so-far covariate
     hist = obs.fetch_asos(st.iem_id, target - timedelta(days=train_days), target)
-    prep = intraday.prep(hist, st.std_utc_offset, [hour_lst])
+    prep = intraday.prep(hist, st.std_utc_offset, sorted({EARLY, hour_lst}))
     prep["day"] = pd.to_datetime(prep["day"])
     rm = prep.set_index("day")[f"rm_{hour_lst}"]
     try:
@@ -115,7 +117,20 @@ def quote_live(st: Station, target: date = None, now_utc: datetime = None,
     except Exception:
         finals = prep.set_index("day")["final"]   # ASOS reconstruction fallback
     res_all = (finals - rm).dropna()
-    res = res_all.tail(60).to_numpy()
+
+    # flow-dependent pool: restrict residuals to days whose morning->now warming
+    # matched today's tercile. OFF by default: walk-forward eval (scripts.flow_eval,
+    # Jul-Aug 2026, 1155 day-ticks) showed +0.3% CRPS overall — a wash (KLAX 15Z
+    # +19.5% but KNYC 15Z -6.5%). Enable per-station only if a future eval earns it.
+    today_climb = None
+    if os.environ.get("WX_FLOW_RESIDUAL") == "1" and hour_lst > EARLY:
+        loc_hour = (today_obs["valid"] + pd.to_timedelta(st.std_utc_offset, unit="h")).dt.hour
+        early = today_obs[loc_hour <= EARLY]["tmpf"]
+        if len(early):
+            today_climb = observed_max - float(early.max())
+    climbs = rm - prep.set_index("day")[f"rm_{EARLY}"]
+    res_flow = intraday.flow_pool(res_all, climbs, today_climb)
+    res = res_flow.tail(60).to_numpy()
     if len(res) < 15:
         return LiveQuote(mu0, s0, trading.gaussian_prob(mu0, s0), observed_max, hour_lst,
                          mu0, s0, calib, intraday_active=False,
@@ -150,7 +165,7 @@ def quote_live(st: Station, target: date = None, now_utc: datetime = None,
         zs.append(float(norm.ppf(pit)))
     shrink = float(np.clip(np.std(zs) * 1.1, 0.7, 1.3)) if len(zs) >= 25 else 1.0
 
-    samples = raw_mix(mu0, s0, res_all.tail(60), observed_max)
+    samples = raw_mix(mu0, s0, res_flow.tail(60).to_numpy(), observed_max)
     samples = samples.mean() + (samples - samples.mean()) * shrink
     samples = np.clip(samples, round(observed_max) - 0.5, None)
     mu_b, s_b = float(samples.mean()), float(samples.std())

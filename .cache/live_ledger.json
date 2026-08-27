@@ -10,7 +10,10 @@
     "count": 276,
     "maker": true,
     "realized": 81.0,
-    "pnl": -44.16
+    "pnl": -44.16,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHCHI-26AUG25-B80.5",
@@ -23,7 +26,10 @@
     "count": 96,
     "maker": true,
     "realized": 81.0,
-    "pnl": -37.44
+    "pnl": -37.44,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHCHI-26AUG25-B82.5",
@@ -36,7 +42,10 @@
     "count": 92,
     "maker": true,
     "realized": 81.0,
-    "pnl": 18.4
+    "pnl": 18.4,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHAUS-26AUG25-B101.5",
@@ -49,7 +58,10 @@
     "count": 250,
     "maker": true,
     "realized": 103.0,
-    "pnl": -72.5
+    "pnl": -72.5,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHAUS-26AUG25-B103.5",
@@ -62,7 +74,10 @@
     "count": 227,
     "maker": true,
     "realized": 103.0,
-    "pnl": -72.64
+    "pnl": -72.64,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHLAX-26AUG25-B83.5",
@@ -75,7 +90,10 @@
     "count": 500,
     "maker": true,
     "realized": 85.0,
-    "pnl": -70.0
+    "pnl": -70.0,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHLAX-26AUG25-B85.5",
@@ -88,7 +106,10 @@
     "count": 129,
     "maker": true,
     "realized": 85.0,
-    "pnl": -50.31
+    "pnl": -50.31,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHLAX-26AUG25-B87.5",
@@ -101,7 +122,10 @@
     "count": 75,
     "maker": true,
     "realized": 85.0,
-    "pnl": 15.0
+    "pnl": 15.0,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHTSFO-26AUG25-B70.5",
@@ -114,7 +138,10 @@
     "count": 62,
     "maker": true,
     "realized": 68.0,
-    "pnl": -22.32
+    "pnl": -22.32,
+    "fee": null,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHNY-26AUG25-B79.5",
@@ -123,11 +150,14 @@
     "side": "no",
     "lo": 79.0,
     "hi": 80.0,
-    "price": 0.89,
-    "count": 84,
+    "price": 0.9,
+    "count": 46,
     "maker": false,
     "realized": 78.0,
-    "pnl": 8.66
+    "pnl": 4.31,
+    "fee": 0.2898,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHNY-26AUG25-T79",
@@ -136,11 +166,14 @@
     "side": "yes",
     "lo": null,
     "hi": 78,
-    "price": 0.89,
-    "count": 84,
+    "price": 0.8952,
+    "count": 42,
     "maker": false,
     "realized": 78.0,
-    "pnl": 8.66
+    "pnl": 4.13,
+    "fee": 0.273,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHTSFO-26AUG25-B72.5",
@@ -153,7 +186,10 @@
     "count": 80,
     "maker": false,
     "realized": 68.0,
-    "pnl": -16.9
+    "pnl": -16.9,
+    "fee": 0.896,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHTSFO-26AUG25-B68.5",
@@ -162,11 +198,14 @@
     "side": "yes",
     "lo": 68.0,
     "hi": 69.0,
-    "price": 0.26,
-    "count": 84,
+    "price": 0.2697,
+    "count": 71,
     "maker": false,
     "realized": 68.0,
-    "pnl": 61.02
+    "pnl": 50.88,
+    "fee": 0.9727,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHNY-26AUG26-T80",
@@ -175,11 +214,14 @@
     "side": "yes",
     "lo": null,
     "hi": 79,
-    "price": 0.13,
+    "price": 0.1073,
     "count": 93,
     "maker": false,
-    "realized": null,
-    "pnl": null
+    "realized": 81.0,
+    "pnl": -10.6,
+    "fee": 0.6231,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHCHI-26AUG26-B81.5",
@@ -188,11 +230,14 @@
     "side": "yes",
     "lo": 81.0,
     "hi": 82.0,
-    "price": 0.02,
-    "count": 448,
+    "price": 0.03,
+    "count": 140,
     "maker": false,
-    "realized": null,
-    "pnl": null
+    "realized": 85.0,
+    "pnl": -4.48,
+    "fee": 0.28,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHTSFO-26AUG26-T72",
@@ -201,11 +246,14 @@
     "side": "yes",
     "lo": null,
     "hi": 71,
-    "price": 0.09,
-    "count": 100,
+    "price": 0.0966,
+    "count": 18,
     "maker": false,
-    "realized": null,
-    "pnl": null
+    "realized": 77.0,
+    "pnl": -1.85,
+    "fee": 0.1098,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHLAX-26AUG26-B82.5",
@@ -214,11 +262,14 @@
     "side": "yes",
     "lo": 82.0,
     "hi": 83.0,
-    "price": 0.01,
+    "price": 0.0147,
     "count": 318,
     "maker": false,
-    "realized": null,
-    "pnl": null
+    "realized": 87.0,
+    "pnl": -4.99,
+    "fee": 0.318,
+    "p_model": null,
+    "p_market": null
   },
   {
     "ticker": "KXHIGHPHIL-26AUG26-B85.5",
@@ -230,7 +281,10 @@
     "price": 0.15,
     "count": 18,
     "maker": false,
-    "realized": null,
-    "pnl": null
+    "realized": 86.0,
+    "pnl": -2.86,
+    "fee": 0.1602,
+    "p_model": null,
+    "p_market": null
   }
 ]

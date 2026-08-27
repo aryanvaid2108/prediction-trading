@@ -30,6 +30,11 @@ MAX_TOTAL_STAKE = float(os.environ.get("LIVE_MAX_STAKE", str(BANKROLL)))  # comb
 PER_STATION_FRAC = float(os.environ.get("LIVE_STATION_FRAC", "0.25"))     # diversify
 MAX_ORDERS = int(os.environ.get("LIVE_MAX_ORDERS") or "0")                # 0 = unlimited (smoke-test with 1)
 MIN_EDGE = float(os.environ.get("LIVE_MIN_EDGE", "0.05"))  # above measured calibration slack
+MIN_PRICE = float(os.environ.get("LIVE_MIN_PRICE", "0.15"))  # no sub-15c longshots (Aug 25-26: all lost)
+RATIO_CAP = float(os.environ.get("LIVE_RATIO_CAP", "2.5"))   # max p/ask disagreement we trust
+MODEL_W = float(os.environ.get("LIVE_MODEL_WEIGHT", "0.5"))  # shrink toward market until Brier earns it up
+DAILY_LOSS_CAP = float(os.environ.get("LIVE_DAILY_LOSS_CAP", "15"))  # 10% of canary bankroll
+BALANCE_FLOOR = float(os.environ.get("LIVE_BALANCE_FLOOR", "0"))     # dollars; 0 = check off
 KELLY = 0.25
 ROBUST_DELTA = 1.5   # edge must survive the mean being off by this many °F
 MARKET_TZ = ZoneInfo("America/New_York")
@@ -59,6 +64,29 @@ class Order:
     price: float
     count: int
     maker: bool
+    p_model: float = None
+    p_market: float = None
+
+
+def risk_gate(led, target, loss_cap=None, resume=None):
+    """(ok, reason) — refuse to place when the most recent settled day lost more
+    than the cap. A bad day means either the model or the accounting broke;
+    trading resumes only via an explicit LIVE_RESUME=1 dispatch, not by cron.
+    """
+    loss_cap = DAILY_LOSS_CAP if loss_cap is None else loss_cap
+    resume = os.environ.get("LIVE_RESUME") == "1" if resume is None else resume
+    if loss_cap <= 0 or resume:
+        return True, "resume override" if resume else "cap disabled"
+    days = {}
+    for f in led.fills:
+        if f.pnl is not None and f.target < target.isoformat():
+            days[f.target] = days.get(f.target, 0.0) + f.pnl
+    if not days:
+        return True, "no settled history"
+    last = max(days)
+    if days[last] <= -loss_cap:
+        return False, f"last settled day {last} lost ${-days[last]:.2f} (cap ${loss_cap:.0f})"
+    return True, f"last settled day {last}: ${days[last]:+.2f}"
 
 
 def build_plan(icaos, target, now_utc, led):
@@ -79,10 +107,14 @@ def build_plan(icaos, target, now_utc, led):
             q = pipeline.quote_live(st, target, now_utc=now_utc)
             ms = kalshi.markets(st.kalshi, target)
             by = {m["ticker"]: m for m in ms}
-            cands = trading.decisions_for(ms, q.prob_fn, BANKROLL, min_edge=MIN_EDGE, kelly_frac=KELLY)
+            cands = trading.decisions_for(ms, q.prob_fn, BANKROLL, min_edge=MIN_EDGE, kelly_frac=KELLY,
+                                          min_price=MIN_PRICE, ratio_cap=RATIO_CAP, model_weight=MODEL_W)
+            imp = trading.market_implied_mean(ms)
+            toward = (imp - q.mu) if imp is not None else None
             gated = [d for d in cands
                      if q.shift_fn is None
-                     or trading.robust_edge(by[d.ticker], d.side, q.shift_fn, ROBUST_DELTA) > 0]
+                     or trading.robust_edge(by[d.ticker], d.side, q.shift_fn, ROBUST_DELTA,
+                                            toward=toward) > 0]
             # per-station diagnostic — makes every quote auditable from the run log
             print(f"  {icao}: μ={q.mu:.1f} σ={q.sigma:.2f} obs_max={q.observed_max} "
                   f"intraday={q.intraday_active} cands={len(cands)} gated={len(gated)}")
@@ -96,7 +128,8 @@ def build_plan(icaos, target, now_utc, led):
                 continue
             m = by[d.ticker]
             lo, hi = trading.market_bounds(m["strike_type"], m.get("floor"), m.get("cap"))
-            plan.append(Order(icao, d.ticker, d.side, lo, hi, d.price, d.count, maker=False))
+            plan.append(Order(icao, d.ticker, d.side, lo, hi, d.price, d.count, maker=False,
+                              p_model=d.model_prob, p_market=d.market_prob))
         except Exception:
             print(f"  {icao}: ERROR\n{traceback.format_exc()}")
     # global cap across all stations, net of what is already staked live today
@@ -127,13 +160,30 @@ def preview(plan, spent):
     print("\nPREVIEW ONLY — no orders placed. Set LIVE=1 to submit these for real.")
 
 
-def _filled_count(response):
-    """Actual contracts filled, from the V2 create-order response (None if unreadable)."""
+def _parse_fill(response, side, planned_price):
+    """(filled, avg_cost, fee_total) from the V2 create-order response.
+
+    The API reports `average_fill_price` in YES terms; a NO fill's cost is its
+    complement (verified against runs 32879236519 / 33004128510: NO planned at
+    0.89/0.15 came back as 0.1000/0.8500). An unreadable fill_count records 0 —
+    never assume the order filled (Day-2 ledger recorded 448 when 140 filled).
+    """
     o = (response or {}).get("order", response or {})
     try:
-        return int(round(float(o.get("fill_count_fp"))))
+        filled = int(round(float(o.get("fill_count", o.get("fill_count_fp")))))
     except (TypeError, ValueError):
-        return None
+        print(f"     UNREADABLE fill_count — recording 0, reconcile required. raw: {response}")
+        return 0, planned_price, 0.0
+    try:
+        avg_yes = float(o.get("average_fill_price"))
+        avg_cost = avg_yes if side == "yes" else round(1.0 - avg_yes, 4)
+    except (TypeError, ValueError):
+        avg_cost = planned_price
+    try:
+        fee_total = round(float(o.get("average_fee_paid")) * filled, 4)
+    except (TypeError, ValueError):
+        fee_total = None
+    return filled, avg_cost, fee_total
 
 
 def place(plan, target, led, now_et):
@@ -147,24 +197,23 @@ def place(plan, target, led, now_et):
         try:
             res = kalshi.place_order(o.ticker, o.side, o.count, px, live=True,
                                      session=session, time_in_force="immediate_or_cancel")
-            filled = _filled_count(res.response)
-            if filled is None:
-                print(f"     (raw response: {res.response})")      # shape check, first run
-                filled = o.count
-            print(f"  ✓ {o.icao} {o.side.upper()} {bucket(o)} filled {filled}/{o.count} @ ~{o.price:.2f}")
+            filled, avg_cost, fee_total = _parse_fill(res.response, o.side, o.price)
+            print(f"  ✓ {o.icao} {o.side.upper()} {bucket(o)} filled {filled}/{o.count} @ {avg_cost:.4f}")
             if filled > 0:
-                led.add(paper.Fill(o.ticker, o.icao, key, o.side, o.lo, o.hi, o.price, filled, maker=False))
-                placed.append((o, filled)); total += filled
+                led.add(paper.Fill(o.ticker, o.icao, key, o.side, o.lo, o.hi, avg_cost, filled,
+                                   maker=False, fee=fee_total,
+                                   p_model=o.p_model, p_market=o.p_market))
+                placed.append((o, filled, avg_cost)); total += filled
         except Exception as e:
             print(f"  ✗ {o.icao} {o.side.upper()} {bucket(o)} FAILED: {type(e).__name__}: {e}")
             failed.append(o)
     led.save()
-    staked = sum(f * o.price for o, f in placed)
+    staked = sum(f * cost for _, f, cost in placed)
     print(f"\nfilled {total} contracts across {len(placed)}/{len(plan)} markets (${staked:.2f}).")
 
     # rich phone notification (actual fills)
     byst = {}
-    for o, f in placed:
+    for o, f, _ in placed:
         byst[o.icao] = byst.get(o.icao, 0) + 1
     L = [f"🟢 {len(placed)} markets · {total} contracts · ${staked:.0f} filled  ({now_et:%H:%M} ET)"]
     if byst:
@@ -259,6 +308,22 @@ def main(*args):
         return
     if not inwin:
         print("WARNING: outside the window — preview only; edges are weaker.")
+
+    ok, why = risk_gate(led, target)
+    print(f"risk gate: {'OK' if ok else 'HALTED'} — {why}")
+    if live and not ok:
+        _write_notify(f"🛑 kill-switch: {why}. No orders placed. "
+                      f"Dispatch with LIVE_RESUME=1 after reviewing.")
+        return
+    if live and BALANCE_FLOOR > 0:
+        try:
+            bal = kalshi.balance().get("balance", 0) / 100
+            if bal < BALANCE_FLOOR:
+                print(f"balance ${bal:.2f} below floor ${BALANCE_FLOOR:.2f} — halting.")
+                _write_notify(f"🛑 balance ${bal:.2f} under floor ${BALANCE_FLOOR:.2f} — no orders placed.")
+                return
+        except Exception as e:
+            print(f"balance check failed (continuing): {type(e).__name__}: {e}")
 
     plan, spent = build_plan(icaos, target, now_utc, led)
     if MAX_ORDERS and len(plan) > MAX_ORDERS:

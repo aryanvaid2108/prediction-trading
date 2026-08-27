@@ -12,7 +12,11 @@ on:
     - cron: "30 14 * * *"   # ~10:30 ET / 8:00pm IST  — morning, biggest edge
     - cron: "10 17 * * *"   # ~13:10 ET / 10:40pm IST — tightening
     - cron: "40 18 * * *"   # ~14:40 ET / 12:10am IST — sharpest, near edge peak
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      resume:
+        description: "Set to 1 to clear the daily-loss kill-switch for this run"
+        default: ""
 
 permissions:
   contents: write            # commit live_ledger.json
@@ -46,6 +50,7 @@ jobs:
           # $150 and total daily stake is capped at $150. Delete this line to
           # restore the full $750 bankroll.
           LIVE_BANKROLL: "150"
+          LIVE_RESUME: ${{ inputs.resume }}
         run: python -m scripts.run_live
 
       - name: Commit live ledger if it changed

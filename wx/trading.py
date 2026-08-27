@@ -48,10 +48,11 @@ class Decision:
     side: str            # "yes" or "no"
     price: float         # taker price paid per contract, dollars
     count: int
-    model_prob: float    # model P(this side settles true)
+    model_prob: float    # RAW model P(this side settles true), pre-shrinkage
     edge_net: float      # per-contract EV after fee, dollars
     ev: float            # total expected value, dollars
     subtitle: str = ""
+    market_prob: float = None  # market mid for this side at decision time
 
 
 def _kelly_count(p: float, price: float, bankroll: float, kelly_frac: float,
@@ -114,32 +115,57 @@ def floored_gaussian_prob(mu: float, sigma: float, floor: float):
 
 def decide(market: dict, prob_fn, bankroll: float,
            min_edge: float = 0.02, kelly_frac: float = 0.25,
-           max_frac: float = 0.10) -> Decision:
+           max_frac: float = 0.10, min_price: float = 0.0,
+           ratio_cap: float = None, model_weight: float = 1.0) -> Decision:
     """Best side (YES/NO taker) for one market, or None if no edge clears fees.
 
     prob_fn(lo, hi) -> P(lo <= daily high <= hi). Decoupling from the
     distribution's form lets the intraday-conditioned / floored predictive plug
     in exactly like a plain Gaussian.
     market: {ticker, strike_type, floor, cap, yes_ask, no_ask, subtitle}.
+
+    min_price skips any side quoted below it: sub-15c books are where the
+    market's intraday information advantage is largest (Aug 25-26: every
+    sub-15c buy lost). ratio_cap rejects claims that the market is wrong by
+    more than that factor (p/ask) — a disagreement that large means the model
+    is missing information, not finding edge. The edge bar also scales with
+    price so 5 points of edge on a 2c contract can't clear it.
+
+    model_weight < 1 shrinks the model probability toward the market mid before
+    edge/sizing (the book has won 8 of 9 large live disagreements so far); the
+    Decision still carries the raw model_prob and the market_prob so every
+    trade feeds the calibration ledger that will earn the weight back up.
     """
     lo, hi = market_bounds(market["strike_type"], market.get("floor"), market.get("cap"))
     p_yes = prob_fn(lo, hi)
+    ya, yb = market.get("yes_ask"), market.get("yes_bid")
+    mid_yes = (ya + yb) / 2 if (ya and yb) else ya
 
     best = None
-    for side, p, ask in (("yes", p_yes, market.get("yes_ask")),
-                         ("no", 1 - p_yes, market.get("no_ask"))):
+    for side, p_raw, ask in (("yes", p_yes, market.get("yes_ask")),
+                             ("no", 1 - p_yes, market.get("no_ask"))):
         if not ask or ask <= 0 or ask >= 1:
             continue
+        if ask < min_price:
+            continue
+        p_mkt = None
+        p = p_raw
+        if mid_yes is not None:
+            p_mkt = mid_yes if side == "yes" else 1 - mid_yes
+            p = model_weight * p_raw + (1 - model_weight) * p_mkt
+        if ratio_cap and p / ask > ratio_cap:
+            continue
         edge = (p - ask) - fee(ask)
-        if edge < min_edge:
+        required = max(min_edge, 0.35 * ask) if min_price else min_edge
+        if edge < required:
             continue
         count = _kelly_count(p, ask, bankroll, kelly_frac, max_frac)
         if count < 1:
             continue
         ev = edge * count
         if best is None or ev > best.ev:
-            best = Decision(market["ticker"], side, ask, count, p, edge, ev,
-                            market.get("subtitle", ""))
+            best = Decision(market["ticker"], side, ask, count, p_raw, edge, ev,
+                            market.get("subtitle", ""), market_prob=p_mkt)
     return best
 
 
@@ -148,21 +174,59 @@ def decisions_for(markets, prob_fn, bankroll: float, **kw):
     return [d for d in (decide(m, prob_fn, bankroll, **kw) for m in markets) if d]
 
 
-def robust_edge(market: dict, side: str, shift_fn, delta: float = 1.5) -> float:
+def robust_edge(market: dict, side: str, shift_fn, delta: float = 1.5,
+                toward: float = None) -> float:
     """Worst-case edge if the predictive mean is off by ±delta degrees.
 
     shift_fn(d) -> prob_fn under a mean shifted by d. A bet that dies from a
-    1.5° miss (well inside our error bar) shouldn't be placed at all."""
+    1.5° miss (well inside our error bar) shouldn't be placed at all.
+
+    The survival bar is proportional to price (edge must stay above fee plus
+    25% of the ask) — a flat `> 0` bar passes any few-cent longshot, because
+    near-zero asks survive any shift, while at-the-money bets die from one.
+    That inversion selected every Aug 26 loser. `toward` additionally tests the
+    mean moved toward the market's implied mean (clamped to ±delta): that is
+    the disagreement actually being priced.
+    """
     lo, hi = market_bounds(market["strike_type"], market.get("floor"), market.get("cap"))
+    shifts = [-delta, delta]
+    if toward is not None:
+        shifts.append(max(-delta, min(delta, toward)))
     worst = float("inf")
-    for d in (-delta, delta):
+    for d in shifts:
         p = shift_fn(d)(lo, hi)
         pw = p if side == "yes" else 1 - p
         ask = market.get("yes_ask") if side == "yes" else market.get("no_ask")
         if ask is None:
             return float("-inf")
-        worst = min(worst, pw - ask)
+        worst = min(worst, pw - ask - fee(ask) - 0.25 * ask)
     return worst
+
+
+def market_implied_mean(markets) -> float:
+    """The book's own expected daily high: bucket midpoints weighted by YES mids.
+
+    Open-ended buckets use their inner bound ±1. Returns None on an empty or
+    unpriced book."""
+    tot_w, tot = 0.0, 0.0
+    for m in markets:
+        try:
+            lo, hi = market_bounds(m["strike_type"], m.get("floor"), m.get("cap"))
+        except (ValueError, KeyError):
+            continue
+        ya, yb = m.get("yes_ask"), m.get("yes_bid")
+        px = None
+        if ya and yb:
+            px = (ya + yb) / 2
+        elif ya:
+            px = ya
+        if not px or px <= 0:
+            continue
+        mid = ((lo + hi) / 2 if lo is not None and hi is not None
+               else (hi - 1 if lo is None else lo + 1))
+        tot_w += px
+        tot += px * mid
+    return tot / tot_w if tot_w > 0 else None
 
 
 def cap_exposure(decisions, budget_dollars: float):
