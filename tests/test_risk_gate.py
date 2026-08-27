@@ -47,3 +47,11 @@ def test_open_positions_do_not_trip_the_gate(tmp_path):
     led = paper.Ledger(tmp_path / "led.json")
     led.add(paper.Fill("T", "KNYC", "2026-08-26", "yes", None, 79, 0.10, 10))  # unsettled
     assert risk_gate(led, date(2026, 8, 27), loss_cap=15, resume=False)[0]
+
+
+def test_breach_blocks_for_three_days_then_expires(tmp_path):
+    led = _ledger(tmp_path, [("2026-08-26", -24.78)])
+    assert not risk_gate(led, date(2026, 8, 27), loss_cap=15, resume=False)[0]
+    assert not risk_gate(led, date(2026, 8, 29), loss_cap=15, resume=False)[0]
+    ok, why = risk_gate(led, date(2026, 8, 30), loss_cap=15, resume=False)
+    assert ok and "expired" in why
