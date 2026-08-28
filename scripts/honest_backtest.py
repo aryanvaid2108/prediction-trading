@@ -33,6 +33,7 @@ MAXC = 300                      # crude liquidity cap per order
 NEW_FILTERS = os.environ.get("BT_NEW_FILTERS", "1") == "1"
 DEPTH_AWARE = os.environ.get("BT_DEPTH", "1") == "1"
 FLOW = os.environ.get("BT_FLOW", "0") == "1"   # flow residual pool: evaluated a wash, off by default
+ONEMIN = os.environ.get("BT_1MIN", "1") == "1" # settlement-grade floor from sustained 1-min max
 MODEL_W = float(os.environ.get("BT_MODEL_W", "1"))   # 0.5 = live shrinkage setting
 MIN_PRICE, RATIO_CAP = 0.15, 2.5
 SLIP = 0.01
@@ -83,6 +84,14 @@ def run_station(ic, start, end, rng):
     prep = intraday.prep(o, st.std_utc_offset, hours_lst)
     prep = prep.assign(day=pd.to_datetime(prep["day"])).set_index("day")
     finals = cli.settlement_high(st.icao, start - timedelta(days=50), end)
+    om = pd.DataFrame()
+    if ONEMIN:
+        try:
+            m1 = obs.fetch_asos_1min(st.iem_id, start, end + timedelta(days=1))
+            om = intraday.prep_1min(m1, st.std_utc_offset, hours_lst)
+            om = om.assign(day=pd.to_datetime(om["day"])).set_index("day")
+        except Exception as ex:
+            print(f"  {ic}: 1-min feed unavailable ({type(ex).__name__}) — hourly floor only")
 
     zhist = {h: [] for h in hours_lst}
     rows, gate_kills, cal = [], 0, []
@@ -125,8 +134,11 @@ def run_station(ic, start, end, rng):
                 zh = zhist[h]
                 shrink = float(np.clip(np.std(zh) * 1.1, 0.7, 1.3)) if len(zh) >= 25 else 1.0
                 zh.append(float(norm.ppf(pit)))
+                floor_d = float(rm_d)
+                if f"om_{h}" in om.columns and d in om.index and pd.notna(om.loc[d, f"om_{h}"]):
+                    floor_d = max(floor_d, float(om.loc[d, f"om_{h}"]))
                 samples = raw.mean() + (raw - raw.mean()) * shrink
-                samples = np.clip(samples, round(float(rm_d)) - 0.5, None)
+                samples = np.clip(samples, round(floor_d) - 0.5, None)
                 prob_fn = trading.sample_prob(samples)
                 shift_fn = lambda dd, _s=samples: trading.sample_prob(_s + dd)
             else:
@@ -185,8 +197,12 @@ def run_station(ic, start, end, rng):
             win = inb if dbest.side == "yes" else not inb
             gross = cnt * (1 - px) if win else -cnt * px
             pnl = round(gross - trading.fee(px, cnt), 2)
+            nya, nyb = candle_price(st.kalshi, dbest.ticker, d.date(), h_utc + 2)
             rows.append({"day": d, "icao": ic, "hour_utc": h_utc, "side": dbest.side,
-                         "price": px, "count": cnt, "dropped": dropped, "win": win, "pnl": pnl})
+                         "price": px, "count": cnt, "dropped": dropped, "win": win, "pnl": pnl,
+                         # book context for execution research (maker-vs-taker bounds)
+                         "ticker": dbest.ticker, "yes_ask": m["yes_ask"], "yes_bid": m.get("yes_bid"),
+                         "next_yes_ask": nya, "next_yes_bid": nyb})
             traded = True
     return rows, gate_kills, len(days), cal
 
@@ -214,7 +230,8 @@ def main(start="2026-07-01", end="2026-08-24", *icaos):
               f"total ${df['pnl'].sum() if len(df) else 0:+8.2f}  win {wr:.0%}  "
               f"median-day ${daily.median():+6.2f}  worst-day ${daily.min():+8.2f}")
     tag = (f"{'new' if NEW_FILTERS else 'old'}_{'depth' if DEPTH_AWARE else 'naive'}"
-           + (f"_w{MODEL_W:g}" if NEW_FILTERS and MODEL_W != 1 else ""))
+           + (f"_w{MODEL_W:g}" if NEW_FILTERS and MODEL_W != 1 else "")
+           + ("_1min" if ONEMIN else ""))
     if not allrows:
         print("no trades anywhere")
         _report_cal(allcal, tag)

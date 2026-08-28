@@ -99,6 +99,23 @@ def quote_live(st: Station, target: date = None, now_utc: datetime = None,
                           & (today_obs["valid"] <= now_naive)].dropna(subset=["tmpf"])
     observed_max = float(today_obs["tmpf"].max()) if len(today_obs) else None
 
+    # settlement-grade floor: raise by the sustained 1-min max (CLI settles on
+    # 1-min data; hourly METARs run ~0.85F cold on peaks). max() only — a feed
+    # gap or fetch failure degrades to the hourly floor, never below it. The
+    # mixture anchor stays hourly (its residuals are trained on hourly rm).
+    floor_max = observed_max
+    if observed_max is not None and os.environ.get("WX_1MIN", "1") == "1":
+        try:
+            m1 = obs.fetch_asos_1min(st.iem_id, target, target + timedelta(days=1))
+            p1 = intraday.prep_1min(m1[m1["valid"] <= now_naive], st.std_utc_offset,
+                                    [int((now_utc + timedelta(hours=st.std_utc_offset)).hour)])
+            row = p1[p1["day"] == target]
+            v = row.iloc[0, 1] if len(row) else None
+            if v is not None and pd.notna(v):
+                floor_max = max(observed_max, float(v))
+        except Exception as e:
+            print(f"    1-min floor unavailable ({type(e).__name__}) — hourly floor only")
+
     if observed_max is None:
         return LiveQuote(mu0, s0, trading.gaussian_prob(mu0, s0), None, hour_lst,
                          mu0, s0, calib, intraday_active=False,
@@ -167,10 +184,10 @@ def quote_live(st: Station, target: date = None, now_utc: datetime = None,
 
     samples = raw_mix(mu0, s0, res_flow.tail(60).to_numpy(), observed_max)
     samples = samples.mean() + (samples - samples.mean()) * shrink
-    samples = np.clip(samples, round(observed_max) - 0.5, None)
+    samples = np.clip(samples, round(floor_max) - 0.5, None)
     mu_b, s_b = float(samples.mean()), float(samples.std())
     prob_fn = trading.sample_prob(samples)
-    return LiveQuote(mu_b, s_b, prob_fn, observed_max, hour_lst, mu0, s0, calib, intraday_active=True,
+    return LiveQuote(mu_b, s_b, prob_fn, floor_max, hour_lst, mu0, s0, calib, intraday_active=True,
                      shift_fn=lambda d, _s=samples: trading.sample_prob(_s + d))
 
 

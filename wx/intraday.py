@@ -53,6 +53,28 @@ class IntradayModel:
         return float((1 - norm.cdf((t - self.samples(observed_max)) / self.bw)).mean())
 
 
+def prep_1min(obs1m: pd.DataFrame, std_utc_offset: int, hours, sustain: int = 3) -> pd.DataFrame:
+    """Per LST day: sustained-max temperature through each cutoff hour, from the
+    1-minute feed.
+
+    A reading counts only if held `sustain` consecutive minutes (rolling min) —
+    the raw feed's 1-2 minute spikes are why it was benched. Audit (45 days x 7
+    stations vs official CLI): max(hourly, this) tracks settlement 78% exactly
+    vs 31% for hourly alone, bias -0.85 -> -0.24. Same shape as prep()."""
+    df = obs1m.dropna(subset=["tmpf"]).sort_values("valid").copy()
+    if not len(df):
+        return pd.DataFrame(columns=["day"])
+    df["t"] = df["tmpf"].rolling(sustain, min_periods=sustain).min()
+    local = df["valid"] + pd.to_timedelta(std_utc_offset, unit="h")
+    df["day"] = lst_day(df["valid"], std_utc_offset)
+    df["hour"] = local.dt.hour
+    out = None
+    for h in hours:
+        rm = df[df["hour"] <= h].groupby("day")["t"].max().rename(f"om_{h}")
+        out = rm.to_frame() if out is None else out.join(rm, how="outer")
+    return out.reset_index() if out is not None else pd.DataFrame(columns=["day"])
+
+
 def flow_pool(res_all: pd.Series, climbs: pd.Series, today_climb: float,
               min_n: int = 15) -> pd.Series:
     """Residuals restricted to days whose morning→cutoff warming matched today's.
