@@ -1,45 +1,41 @@
 # 📈 Paper-trading dashboard
 
-_Updated 2026-08-29 19:54 UTC · bankroll $1000 · stations KNYC · KMDW · KAUS · KLAX · KSFO · KDEN · KPHL · no live orders placed_
+_Updated 2026-08-30 18:20 UTC · bankroll $1000 · stations KNYC · KMDW · KAUS · KLAX · KSFO · KDEN · KPHL · no live orders placed_
 
 | Realized P&L | ROI (on stake) | Win rate | Closed | Open | Open stake |
 |---:|---:|---:|---:|---:|---:|
-| **$-202.45** | **-20.4%** | **41%** | 17 | 4 | $307 |
+| **$-431.41** | **-33.2%** | **38%** | 21 | 1 | $37 |
 
 ### By station
 
 | Station | Positions | Open | Closed | Realized P&L |
 |:--|--:|--:|--:|--:|
-| KAUS | 4 | 1 | 3 | $-122.91 |
+| KAUS | 5 | 1 | 4 | $-227.56 |
 | KLAX | 1 | 0 | 1 | $-23.71 |
-| KMDW | 2 | 1 | 1 | $-78.56 |
+| KMDW | 2 | 0 | 2 | $-149.98 |
 | KNYC | 6 | 0 | 6 | $+153.40 |
-| KPHL | 1 | 1 | 0 | $+0.00 |
-| KSFO | 7 | 1 | 6 | $-130.67 |
+| KPHL | 1 | 0 | 1 | $-106.93 |
+| KSFO | 7 | 0 | 7 | $-76.63 |
 
 ### Cumulative realized P&L
 
 ```mermaid
 xychart-beta
-  x-axis ["08-24", "08-26"]
+  x-axis ["08-24", "08-26", "08-29"]
   y-axis "USD"
-  line [80.05, -202.45]
+  line [80.05, -202.45, -431.41]
 ```
 
 ### Open positions
 
 | Station | Settles | Bucket | Side | Price | Qty | Type |
 |:--|:--|:--|:--|--:|--:|:--|
-| KAUS | 2026-08-29 | 99–100° | NO | $0.31 | 322 | taker |
-| KMDW | 2026-08-29 | 82–83° | NO | $0.03 | 2229 | taker |
-| KPHL | 2026-08-29 | ≤80° | YES | $0.01 | 10000 | taker |
-| KSFO | 2026-08-29 | 69–70° | NO | $0.42 | 96 | taker |
+| KAUS | 2026-08-30 | 96–97° | YES | $0.02 | 1855 | taker |
 
 ### Recently settled
 
 | Station | Day | Bucket | Side | Settled high | P&L |
 |:--|:--|:--|:--|--:|--:|
-| KNYC | 2026-08-24 | 80–81° | NO | 79° | $+129.39 |
 | KNYC | 2026-08-24 | 78–79° | YES | 79° | $+151.89 |
 | KNYC | 2026-08-24 | ≤77° | YES | 79° | $-12.16 |
 | KNYC | 2026-08-24 | 82–83° | NO | 79° | $+1.98 |
@@ -56,3 +52,7 @@ xychart-beta
 | KMDW | 2026-08-26 | 81–82° | YES | 85° | $-78.56 |
 | KLAX | 2026-08-26 | 82–83° | YES | 87° | $-23.71 |
 | KSFO | 2026-08-26 | ≤71° | YES | 77° | $-74.01 |
+| KSFO | 2026-08-29 | 69–70° | NO | 71° | $+54.04 |
+| KPHL | 2026-08-29 | ≤80° | YES | 82° | $-106.93 |
+| KMDW | 2026-08-29 | 82–83° | NO | 82° | $-71.42 |
+| KAUS | 2026-08-29 | 99–100° | NO | 100° | $-104.65 |
