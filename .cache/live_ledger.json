@@ -297,8 +297,8 @@
     "price": 0.277,
     "count": 26,
     "maker": false,
-    "realized": null,
-    "pnl": null,
+    "realized": 100.0,
+    "pnl": -7.57,
     "fee": 0.364,
     "p_model": 0.656,
     "p_market": 0.31499999999999995
