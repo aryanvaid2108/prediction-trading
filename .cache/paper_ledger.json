@@ -345,8 +345,8 @@
     "price": 0.02,
     "count": 1855,
     "maker": false,
-    "realized": null,
-    "pnl": null,
+    "realized": 100.0,
+    "pnl": -39.65,
     "fee": null,
     "p_model": null,
     "p_market": null
@@ -361,8 +361,8 @@
     "price": 0.61,
     "count": 163,
     "maker": false,
-    "realized": null,
-    "pnl": null,
+    "realized": 85.0,
+    "pnl": -102.15,
     "fee": null,
     "p_model": null,
     "p_market": null
@@ -377,8 +377,8 @@
     "price": 0.18,
     "count": 555,
     "maker": false,
-    "realized": null,
-    "pnl": null,
+    "realized": 87.0,
+    "pnl": -105.64,
     "fee": null,
     "p_model": null,
     "p_market": null

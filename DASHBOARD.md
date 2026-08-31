@@ -1,47 +1,36 @@
 # 📈 Paper-trading dashboard
 
-_Updated 2026-08-30 20:02 UTC · bankroll $1000 · stations KNYC · KMDW · KAUS · KLAX · KSFO · KDEN · KPHL · no live orders placed_
+_Updated 2026-08-31 20:17 UTC · bankroll $1000 · stations KNYC · KMDW · KAUS · KLAX · KSFO · KDEN · KPHL · no live orders placed_
 
 | Realized P&L | ROI (on stake) | Win rate | Closed | Open | Open stake |
 |---:|---:|---:|---:|---:|---:|
-| **$-431.41** | **-33.2%** | **38%** | 21 | 3 | $236 |
+| **$-678.85** | **-44.2%** | **33%** | 24 | 0 | $0 |
 
 ### By station
 
 | Station | Positions | Open | Closed | Realized P&L |
 |:--|--:|--:|--:|--:|
-| KAUS | 5 | 1 | 4 | $-227.56 |
-| KDEN | 1 | 1 | 0 | $+0.00 |
+| KAUS | 5 | 0 | 5 | $-267.21 |
+| KDEN | 1 | 0 | 1 | $-102.15 |
 | KLAX | 1 | 0 | 1 | $-23.71 |
 | KMDW | 2 | 0 | 2 | $-149.98 |
 | KNYC | 6 | 0 | 6 | $+153.40 |
-| KPHL | 2 | 1 | 1 | $-106.93 |
+| KPHL | 2 | 0 | 2 | $-212.57 |
 | KSFO | 7 | 0 | 7 | $-76.63 |
 
 ### Cumulative realized P&L
 
 ```mermaid
 xychart-beta
-  x-axis ["08-24", "08-26", "08-29"]
+  x-axis ["08-24", "08-26", "08-29", "08-30"]
   y-axis "USD"
-  line [80.05, -202.45, -431.41]
+  line [80.05, -202.45, -431.41, -678.85]
 ```
-
-### Open positions
-
-| Station | Settles | Bucket | Side | Price | Qty | Type |
-|:--|:--|:--|:--|--:|--:|:--|
-| KAUS | 2026-08-30 | 96–97° | YES | $0.02 | 1855 | taker |
-| KDEN | 2026-08-30 | 85–86° | NO | $0.61 | 163 | taker |
-| KPHL | 2026-08-30 | 86–87° | NO | $0.18 | 555 | taker |
 
 ### Recently settled
 
 | Station | Day | Bucket | Side | Settled high | P&L |
 |:--|:--|:--|:--|--:|--:|
-| KNYC | 2026-08-24 | 78–79° | YES | 79° | $+151.89 |
-| KNYC | 2026-08-24 | ≤77° | YES | 79° | $-12.16 |
-| KNYC | 2026-08-24 | 82–83° | NO | 79° | $+1.98 |
 | KSFO | 2026-08-24 | 71–72° | YES | 73° | $-63.60 |
 | KSFO | 2026-08-24 | 69–70° | YES | 73° | $-14.74 |
 | KSFO | 2026-08-24 | ≤68° | NO | 73° | $+8.56 |
@@ -59,3 +48,6 @@ xychart-beta
 | KPHL | 2026-08-29 | ≤80° | YES | 82° | $-106.93 |
 | KMDW | 2026-08-29 | 82–83° | NO | 82° | $-71.42 |
 | KAUS | 2026-08-29 | 99–100° | NO | 100° | $-104.65 |
+| KAUS | 2026-08-30 | 96–97° | YES | 100° | $-39.65 |
+| KDEN | 2026-08-30 | 85–86° | NO | 85° | $-102.15 |
+| KPHL | 2026-08-30 | 86–87° | NO | 87° | $-105.64 |
