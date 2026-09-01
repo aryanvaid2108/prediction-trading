@@ -1,10 +1,10 @@
 # 📈 Paper-trading dashboard
 
-_Updated 2026-09-01 18:02 UTC · bankroll $1000 · stations KNYC · KMDW · KAUS · KLAX · KSFO · KDEN · KPHL · no live orders placed_
+_Updated 2026-09-01 20:06 UTC · bankroll $1000 · stations KNYC · KMDW · KAUS · KLAX · KSFO · KDEN · KPHL · no live orders placed_
 
 | Realized P&L | ROI (on stake) | Win rate | Closed | Open | Open stake |
 |---:|---:|---:|---:|---:|---:|
-| **$-678.85** | **-44.2%** | **33%** | 24 | 2 | $115 |
+| **$-678.85** | **-44.2%** | **33%** | 24 | 3 | $182 |
 
 ### By station
 
@@ -12,7 +12,7 @@ _Updated 2026-09-01 18:02 UTC · bankroll $1000 · stations KNYC · KMDW · KAUS
 |:--|--:|--:|--:|--:|
 | KAUS | 6 | 1 | 5 | $-267.21 |
 | KDEN | 1 | 0 | 1 | $-102.15 |
-| KLAX | 1 | 0 | 1 | $-23.71 |
+| KLAX | 2 | 1 | 1 | $-23.71 |
 | KMDW | 3 | 1 | 2 | $-149.98 |
 | KNYC | 6 | 0 | 6 | $+153.40 |
 | KPHL | 2 | 0 | 2 | $-212.57 |
@@ -32,6 +32,7 @@ xychart-beta
 | Station | Settles | Bucket | Side | Price | Qty | Type |
 |:--|:--|:--|:--|--:|--:|:--|
 | KAUS | 2026-09-01 | 100–101° | NO | $0.27 | 207 | taker |
+| KLAX | 2026-09-01 | 76–77° | NO | $0.10 | 673 | taker |
 | KMDW | 2026-09-01 | 91–92° | YES | $0.04 | 1471 | taker |
 
 ### Recently settled
