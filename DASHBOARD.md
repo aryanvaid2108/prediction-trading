@@ -1,47 +1,45 @@
 # 📈 Paper-trading dashboard
 
-_Updated 2026-09-02 19:50 UTC · bankroll $1000 · stations KNYC · KMDW · KAUS · KLAX · KSFO · KDEN · KPHL · no live orders placed_
+_Updated 2026-09-03 18:12 UTC · bankroll $1000 · stations KNYC · KMDW · KAUS · KLAX · KSFO · KDEN · KPHL · no live orders placed_
 
 | Realized P&L | ROI (on stake) | Win rate | Closed | Open | Open stake |
 |---:|---:|---:|---:|---:|---:|
-| **$-871.94** | **-50.8%** | **30%** | 27 | 3 | $229 |
+| **$-791.59** | **-40.7%** | **30%** | 30 | 4 | $337 |
 
 ### By station
 
 | Station | Positions | Open | Closed | Realized P&L |
 |:--|--:|--:|--:|--:|
-| KAUS | 6 | 0 | 6 | $-325.96 |
+| KAUS | 7 | 1 | 6 | $-325.96 |
 | KDEN | 1 | 0 | 1 | $-102.15 |
-| KLAX | 3 | 1 | 2 | $-95.25 |
-| KMDW | 4 | 1 | 3 | $-212.78 |
-| KNYC | 6 | 0 | 6 | $+153.40 |
+| KLAX | 3 | 0 | 3 | $-191.56 |
+| KMDW | 5 | 1 | 4 | $-253.47 |
+| KNYC | 7 | 1 | 6 | $+153.40 |
 | KPHL | 2 | 0 | 2 | $-212.57 |
-| KSFO | 8 | 1 | 7 | $-76.63 |
+| KSFO | 9 | 1 | 8 | $+140.72 |
 
 ### Cumulative realized P&L
 
 ```mermaid
 xychart-beta
-  x-axis ["08-24", "08-26", "08-29", "08-30", "09-01"]
+  x-axis ["08-24", "08-26", "08-29", "08-30", "09-01", "09-02"]
   y-axis "USD"
-  line [80.05, -202.45, -431.41, -678.85, -871.94]
+  line [80.05, -202.45, -431.41, -678.85, -871.94, -791.59]
 ```
 
 ### Open positions
 
 | Station | Settles | Bucket | Side | Price | Qty | Type |
 |:--|:--|:--|:--|--:|--:|:--|
-| KLAX | 2026-09-02 | 77–78° | NO | $0.08 | 1131 | taker |
-| KMDW | 2026-09-02 | 96–97° | NO | $0.09 | 425 | taker |
-| KSFO | 2026-09-02 | 71–72° | NO | $0.31 | 322 | taker |
+| KAUS | 2026-09-03 | 101–102° | NO | $0.46 | 100 | taker |
+| KMDW | 2026-09-03 | 90–91° | NO | $0.18 | 555 | taker |
+| KNYC | 2026-09-03 | ≤82° | YES | $0.19 | 526 | taker |
+| KSFO | 2026-09-03 | 70–71° | YES | $0.12 | 757 | taker |
 
 ### Recently settled
 
 | Station | Day | Bucket | Side | Settled high | P&L |
 |:--|:--|:--|:--|--:|--:|
-| KSFO | 2026-08-24 | 75–76° | NO | 73° | $+5.92 |
-| KAUS | 2026-08-24 | 102–103° | YES | 104° | $-88.20 |
-| KAUS | 2026-08-24 | 104–105° | NO | 104° | $-52.39 |
 | KAUS | 2026-08-24 | 106–107° | NO | 104° | $+17.68 |
 | KSFO | 2026-08-24 | 73–74° | YES | 73° | $+7.20 |
 | KNYC | 2026-08-24 | 80–81° | YES | 79° | $-11.48 |
@@ -59,3 +57,6 @@ xychart-beta
 | KMDW | 2026-09-01 | 91–92° | YES | 94° | $-62.80 |
 | KAUS | 2026-09-01 | 100–101° | NO | 101° | $-58.75 |
 | KLAX | 2026-09-01 | 76–77° | NO | 76° | $-71.54 |
+| KMDW | 2026-09-02 | 96–97° | NO | 96° | $-40.69 |
+| KLAX | 2026-09-02 | 77–78° | NO | 77° | $-96.31 |
+| KSFO | 2026-09-02 | 71–72° | NO | 73° | $+217.35 |
