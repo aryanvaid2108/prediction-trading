@@ -50,7 +50,7 @@ def test_arms_differ_from_control_by_one_parameter():
 
 
 def test_quote_error_is_logged_and_reported(tmp_path, monkeypatch):
-    monkeypatch.setattr(run_live, "TICK_LOG", tmp_path / "ticks.jsonl")
+    monkeypatch.setattr(run_live, "TICK_DIR", tmp_path / "ticks")
     monkeypatch.setattr(run_live, "LOG_TICKS", True)
     led = paper.Ledger(tmp_path / "live.json")
     quotes = {"KMDW": TimeoutError("api.open-meteo.com read timed out"), "KAUS": (Q, MS)}
@@ -59,7 +59,9 @@ def test_quote_error_is_logged_and_reported(tmp_path, monkeypatch):
                                               led, quotes=quotes, slot=19)
     assert errors == {"KMDW": "TimeoutError"}
     assert "KMDW" in run_live._error_lines(errors)[0]
-    recs = [json.loads(l) for l in (tmp_path / "ticks.jsonl").read_text().splitlines()]
+    files = list((tmp_path / "ticks").glob("*.jsonl"))
+    assert len(files) == 1 and files[0].name == "20260829T1941Z.jsonl"
+    recs = [json.loads(l) for l in files[0].read_text().splitlines()]
     assert {r["icao"] for r in recs} == {"KMDW", "KAUS"}
     kaus = next(r for r in recs if r["icao"] == "KAUS")
     assert kaus["mu"] == 97.8 and all("gated" in c for c in kaus["cands"])
@@ -85,3 +87,10 @@ def test_failed_station_gets_one_serial_retry(monkeypatch):
     monkeypatch.setattr(run_live, "quote_station", flaky)
     out = run_live.quote_all(["KLAX", "KAUS"], date(2026, 9, 4), datetime(2026, 9, 4, 19, tzinfo=timezone.utc))
     assert not isinstance(out["KLAX"], Exception) and calls.count("KLAX") == 2
+
+
+def test_ledger_union_keeps_both_sides_fills():
+    from scripts.merge_ledger import union
+    a = [{"ticker": "A", "count": 10}, {"ticker": "B", "count": 5}]
+    b = [{"ticker": "A", "count": 10}, {"ticker": "C", "count": 7}]
+    assert union(a, b) == [{"ticker": "A", "count": 10}, {"ticker": "B", "count": 5}, {"ticker": "C", "count": 7}]

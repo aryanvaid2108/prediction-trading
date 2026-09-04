@@ -47,7 +47,7 @@ WORKERS = int(os.environ.get("WX_WORKERS", "2"))                # concurrent sta
 MARKET_TZ = ZoneInfo("America/New_York")
 WINDOW_ET = (10, 16)
 LIVE_LEDGER = paper.LEDGER_DIR / "live_ledger.json"
-TICK_LOG = paper.LEDGER_DIR / "ticks.jsonl"       # every quote + candidate, auditable
+TICK_DIR = paper.LEDGER_DIR / "ticks"             # every quote + candidate, one file per run (no merge conflicts)
 LOG_TICKS = os.environ.get("LIVE") in ("1", "true", "yes")   # previews stay out of the committed log
 NOTIFY_FILE = paper.LEDGER_DIR / "live_notify.txt"
 DEFAULT_STATIONS = stations.ACTIVE
@@ -135,8 +135,9 @@ def log_tick(rec):
     gate verdict — so 'cands=1 gated=0' is auditable after the fact."""
     if not LOG_TICKS:
         return
-    TICK_LOG.parent.mkdir(exist_ok=True)
-    with open(TICK_LOG, "a") as fh:
+    TICK_DIR.mkdir(exist_ok=True)
+    stamp = rec["ts"].replace("-", "").replace(":", "")[:13]      # YYYYMMDDTHHMM
+    with open(TICK_DIR / f"{stamp}Z.jsonl", "a") as fh:
         fh.write(json.dumps(rec) + "\n")
 
 

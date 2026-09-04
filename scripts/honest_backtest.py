@@ -1,15 +1,25 @@
 """Honest backtest of the FULL current strategy, judged on the median day.
 
-Simulates exactly what run_live now does — honest mixture quote (walk-forward
-sharpening), ONE highest-EV robust bet per station per day (±1.5° gate,
-min_edge 0.05), IOC taker fills at real candle asks + fees — over history, and
-reports per-station median/worst-day stats. This is the go-live gate: a station
-earns full size only if its edge survives THIS test (mean-based validation is
-banned; Day 1 taught us why).
+Two stages so a parameter sweep is cheap:
+  snapshot_station  — the expensive part, done once per station/window: the
+                      honest-mixture quote (walk-forward sharpening, 1-min floor)
+                      at every tick, the candle-priced book, and the CLI outcome.
+                      Pickled under .cache/bt_quotes/ (gitignored).
+  simulate          — replay ANY wx.strategies.Arm over a snapshot with the same
+                      selector the live loop and paper arms use, IOC taker fills
+                      at real candle asks + fees, depth caps from the live fill
+                      record. Milliseconds per configuration.
+
+This is the go-live gate: a station earns full size only if its edge survives
+THIS test (mean-based validation is banned; Day 1 taught us why).
 
 Usage: python -m scripts.honest_backtest [start] [end] [ICAO ...]
+Envs:  BT_MODEL_W (default 1; 0.5 = live), BT_NEW_FILTERS=0 (pre-Aug-27 rules),
+       BT_DEPTH=0 (fantasy fills), BT_1MIN=0, BT_FLOW=1, TICKS=15,17,19
 """
 import json
+import os
+import pickle
 import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -18,26 +28,29 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-from wx import backtest, cli, intraday, kalshi, obs, stations, trading
+from wx import backtest, cli, intraday, kalshi, obs, stations, strategies, trading
 
 BANKROLL = 750.0
-MIN_EDGE, KELLY, ROBUST_DELTA = 0.05, 0.25, 1.5
-import os
+KELLY = 0.25
 TICKS_UTC = [int(h) for h in os.environ.get("TICKS", "15,17,19").split(",")]
+ALL_TICKS = (15, 17, 19)        # snapshots always carry every tick; simulate picks a subset
 MAXC = 300                      # crude liquidity cap per order
 
-# BT_NEW_FILTERS=1 applies the live engine's post-Aug-26 selection rules
-# (15c price floor, p/ask ratio cap, proportional robust gate shifted toward
-# the market-implied mean). BT_DEPTH=1 replaces fantasy full fills with caps
-# calibrated to the live IOC record and adds the observed ~1c slip.
 NEW_FILTERS = os.environ.get("BT_NEW_FILTERS", "1") == "1"
 DEPTH_AWARE = os.environ.get("BT_DEPTH", "1") == "1"
 FLOW = os.environ.get("BT_FLOW", "0") == "1"   # flow residual pool: evaluated a wash, off by default
 ONEMIN = os.environ.get("BT_1MIN", "1") == "1" # settlement-grade floor from sustained 1-min max
 MODEL_W = float(os.environ.get("BT_MODEL_W", "1"))   # 0.5 = live shrinkage setting
-MIN_PRICE, RATIO_CAP = 0.15, 2.5
 SLIP = 0.01
 EARLY = 9
+N_MIX, BW = 2000, 0.25
+CACHE = Path(__file__).resolve().parent.parent / ".cache" / "candles_full.json"
+SNAP_DIR = CACHE.parent / "bt_quotes"
+_cache = json.loads(CACHE.read_text()) if CACHE.exists() else {}
+SESSION = kalshi._session()
+
+OLD_RULES = strategies.Arm("old", min_price=0.0, ratio_cap=None, model_weight=1.0,
+                           toward_market=False)
 
 
 def depth_cap(ask: float) -> int:
@@ -49,10 +62,6 @@ def depth_cap(ask: float) -> int:
     if ask < 0.20:
         return 90
     return 150
-N_MIX, BW = 2000, 0.25
-CACHE = Path(__file__).resolve().parent.parent / ".cache" / "candles_full.json"
-_cache = json.loads(CACHE.read_text()) if CACHE.exists() else {}
-SESSION = kalshi._session()
 
 
 def candle_price(series, ticker, day, hr_utc):
@@ -73,9 +82,24 @@ def candle_price(series, ticker, day, hr_utc):
     return (v[1], v[0]) if v else (None, None)
 
 
-def run_station(ic, start, end, rng):
+class Quote:
+    """What strategies.select needs: prob_fn, shift_fn, mu."""
+    def __init__(self, samples, mu0, s0):
+        if samples is not None:
+            self.mu = float(samples.mean())
+            self.prob_fn = trading.sample_prob(samples)
+            self.shift_fn = lambda dd, _s=samples: trading.sample_prob(_s + dd)
+        else:
+            self.mu = mu0
+            self.prob_fn = trading.gaussian_prob(mu0, s0)
+            self.shift_fn = lambda dd: trading.gaussian_prob(mu0 + dd, s0)
+
+
+def snapshot_station(ic, start, end, rng, ticks=ALL_TICKS):
+    """One record per (day, tick): the quote's samples, the priced book, the
+    next-tick book (execution research) and the CLI outcome. Returns (records, ndays)."""
     st = stations.get(ic)
-    hours_lst = sorted({EARLY} | {h + st.std_utc_offset for h in TICKS_UTC})
+    hours_lst = sorted({EARLY} | {h + st.std_utc_offset for h in ticks})
     table, cols = backtest.build_archive_table_wide(st, start - timedelta(days=50), end)
     scored = backtest.rolling_score_mixed(table, cols, min_train=45, window=45)
     calib = backtest.calibration_factor(scored)
@@ -94,7 +118,7 @@ def run_station(ic, start, end, rng):
             print(f"  {ic}: 1-min feed unavailable ({type(ex).__name__}) — hourly floor only")
 
     zhist = {h: [] for h in hours_lst}
-    rows, gate_kills, cal = [], 0, []
+    recs = []
     days = sorted(sc.index.intersection(prep.index).intersection(finals.index))
     days = [d for d in days if d >= pd.Timestamp(start)]
     for d in days:
@@ -105,8 +129,7 @@ def run_station(ic, start, end, rng):
             ms = kalshi.markets(st.kalshi, d.date(), session=SESSION)
         except Exception:
             continue
-        traded = False
-        for h_utc in TICKS_UTC:
+        for h_utc in ticks:
             h = h_utc + st.std_utc_offset
             rm_col = f"rm_{h}"
             rm_d = prep.loc[d, rm_col] if rm_col in prep.columns else np.nan
@@ -122,6 +145,7 @@ def run_station(ic, start, end, rng):
             res = res_all.tail(60).to_numpy()
 
             # quote: honest mixture (mirrors pipeline.quote_live) or prior fallback
+            samples = None
             if len(res) >= 15:
                 s_i = max(float(res.std()), 0.3)
                 w0, wi = 1.0 / s0**2, 1.0 / s_i**2
@@ -138,88 +162,98 @@ def run_station(ic, start, end, rng):
                 if f"om_{h}" in om.columns and d in om.index and pd.notna(om.loc[d, f"om_{h}"]):
                     floor_d = max(floor_d, float(om.loc[d, f"om_{h}"]))
                 samples = raw.mean() + (raw - raw.mean()) * shrink
-                samples = np.clip(samples, round(floor_d) - 0.5, None)
-                prob_fn = trading.sample_prob(samples)
-                shift_fn = lambda dd, _s=samples: trading.sample_prob(_s + dd)
-            else:
-                prob_fn = trading.gaussian_prob(mu0, s0)
-                shift_fn = lambda dd: trading.gaussian_prob(mu0 + dd, s0)
+                samples = np.clip(samples, round(floor_d) - 0.5, None).astype(np.float32)
 
-            # prices at this hour
-            priced = []
+            priced, nxt = [], {}
             for m in ms:
                 ya, yb = candle_price(st.kalshi, m["ticker"], d.date(), h_utc)
                 if ya is None:
                     continue
                 priced.append(dict(m, yes_ask=ya, yes_bid=yb,
                                    no_ask=(1 - yb) if yb is not None else None))
+                nxt[m["ticker"]] = candle_price(st.kalshi, m["ticker"], d.date(), h_utc + 2)
+            recs.append({"day": d, "icao": ic, "hour_utc": h_utc, "samples": samples,
+                         "mu0": mu0, "s0": s0, "y": y, "priced": priced, "next": nxt})
+    return recs, len(days)
 
-            # model-vs-market calibration on every priced bucket (Item 10)
+
+def load_snapshot(ic, start, end, rng=None):
+    """Disk-cached snapshot_station (the network-heavy stage)."""
+    SNAP_DIR.mkdir(exist_ok=True)
+    tag = f"{'flow_' if FLOW else ''}{'1min' if ONEMIN else 'hourly'}"
+    p = SNAP_DIR / f"{ic}_{start}_{end}_{tag}.pkl"
+    if p.exists():
+        return pickle.loads(p.read_bytes())
+    out = snapshot_station(ic, start, end, rng or np.random.default_rng(3))
+    p.write_bytes(pickle.dumps(out))
+    return out
+
+
+def simulate(recs, arm, ticks=ALL_TICKS, depth=True, slip=SLIP, bankroll=BANKROLL,
+             kelly=KELLY, maxc=MAXC, exclude=(), calibration=False):
+    """Replay one arm over snapshot records. Returns (trade rows, gate kills, cal rows).
+    One thesis per station per day: the first tick with a gated survivor trades."""
+    rows, kills, cal = [], 0, []
+    arm_kw = dict(vars(arm)); arm_kw["kelly_frac"] = kelly
+    arm = strategies.Arm(**arm_kw)
+    traded = set()
+    for r in recs:
+        if r["icao"] in exclude or r["hour_utc"] not in ticks:
+            continue
+        q = Quote(r["samples"], r["mu0"], r["s0"])
+        priced, y, d = r["priced"], r["y"], r["day"]
+        if calibration:
             for m in priced:
                 if m.get("yes_bid") is None:
                     continue
                 lo_, hi_ = trading.market_bounds(m["strike_type"], m.get("floor"), m.get("cap"))
                 yy = 1.0 if ((lo_ is None or y >= lo_) and (hi_ is None or y <= hi_)) else 0.0
-                cal.append({"day": d, "icao": ic, "hour_utc": h_utc, "ticker": m["ticker"],
-                            "p_model": prob_fn(lo_, hi_),
+                cal.append({"day": d, "icao": r["icao"], "hour_utc": r["hour_utc"], "ticker": m["ticker"],
+                            "p_model": q.prob_fn(lo_, hi_),
                             "p_market": (m["yes_ask"] + m["yes_bid"]) / 2, "outcome": yy})
-
-            if traded:
-                continue                       # one thesis; keep looping only to feed zhist
-            extra = (dict(min_price=MIN_PRICE, ratio_cap=RATIO_CAP, model_weight=MODEL_W)
-                     if NEW_FILTERS else {})
-            cands = trading.decisions_for(priced, prob_fn, BANKROLL, min_edge=MIN_EDGE,
-                                          kelly_frac=KELLY, **extra)
-            by = {m["ticker"]: m for m in priced}
-            toward = None
-            if NEW_FILTERS:
-                imp = trading.market_implied_mean(priced)
-                mu_q = float(samples.mean()) if len(res) >= 15 else mu0
-                toward = (imp - mu_q) if imp is not None else None
-            gated = [c for c in cands
-                     if trading.robust_edge(by[c.ticker], c.side, shift_fn, ROBUST_DELTA,
-                                            toward=toward) > 0]
-            gate_kills += len(cands) - len(gated)
-            if not gated:
-                continue
-            dbest = max(gated, key=lambda x: x.ev)
-            cnt = min(dbest.count, MAXC)
-            px = dbest.price
-            dropped = 0
-            if DEPTH_AWARE:
-                dcap = depth_cap(px)
-                dropped = max(0, cnt - dcap)
-                cnt = min(cnt, dcap)
-                px = min(0.99, round(px + SLIP, 4))
-            m = by[dbest.ticker]
-            lo, hi = trading.market_bounds(m["strike_type"], m.get("floor"), m.get("cap"))
-            inb = (lo is None or y >= lo) and (hi is None or y <= hi)
-            win = inb if dbest.side == "yes" else not inb
-            gross = cnt * (1 - px) if win else -cnt * px
-            pnl = round(gross - trading.fee(px, cnt), 2)
-            nya, nyb = candle_price(st.kalshi, dbest.ticker, d.date(), h_utc + 2)
-            rows.append({"day": d, "icao": ic, "hour_utc": h_utc, "side": dbest.side,
-                         "price": px, "count": cnt, "dropped": dropped, "win": win, "pnl": pnl,
-                         # book context for execution research (maker-vs-taker bounds)
-                         "ticker": dbest.ticker, "yes_ask": m["yes_ask"], "yes_bid": m.get("yes_bid"),
-                         "next_yes_ask": nya, "next_yes_bid": nyb})
-            traded = True
-    return rows, gate_kills, len(days), cal
+        if (r["icao"], d) in traded:
+            continue
+        pick, cands = strategies.select(priced, q, bankroll, arm)
+        kills += sum(not c.gated for c in cands)
+        if pick is None:
+            continue
+        by = {m["ticker"]: m for m in priced}
+        cnt, px, dropped = min(pick.count, maxc), pick.price, 0
+        if depth:
+            dcap = depth_cap(px)
+            dropped = max(0, cnt - dcap)
+            cnt = min(cnt, dcap)
+            px = min(0.99, round(px + slip, 4))
+        m = by[pick.ticker]
+        lo, hi = trading.market_bounds(m["strike_type"], m.get("floor"), m.get("cap"))
+        inb = (lo is None or y >= lo) and (hi is None or y <= hi)
+        win = inb if pick.side == "yes" else not inb
+        gross = cnt * (1 - px) if win else -cnt * px
+        nya, nyb = r["next"].get(pick.ticker, (None, None))
+        rows.append({"day": d, "icao": r["icao"], "hour_utc": r["hour_utc"], "side": pick.side,
+                     "price": px, "count": cnt, "dropped": dropped, "win": win,
+                     "pnl": round(gross - trading.fee(px, cnt), 2),
+                     "ticker": pick.ticker, "yes_ask": m["yes_ask"], "yes_bid": m.get("yes_bid"),
+                     "next_yes_ask": nya, "next_yes_bid": nyb})
+        traded.add((r["icao"], d))
+    return rows, kills, cal
 
 
 def main(start="2026-07-01", end="2026-08-24", *icaos):
     s, e = date.fromisoformat(start), date.fromisoformat(end)
     icaos = list(icaos) or stations.ACTIVE
-    rng = np.random.default_rng(3)
+    arm = (strategies.Arm("bt", model_weight=MODEL_W) if NEW_FILTERS else OLD_RULES)
     allrows, allcal = [], []
     print(f"Honest backtest {start}..{end}  (one robust thesis/station/day, "
-          f"min_edge {MIN_EDGE}, ±{ROBUST_DELTA}° gate, MAXC {MAXC}, bankroll ${BANKROLL:.0f})\n")
+          f"arm {arm}, ticks {TICKS_UTC}, MAXC {MAXC}, bankroll ${BANKROLL:.0f})\n")
     for ic in icaos:
         try:
-            rows, kills, ndays, cal = run_station(ic, s, e, rng)
+            recs, ndays = load_snapshot(ic, s, e)
         except Exception as ex:
             print(f"{ic}: ERROR {type(ex).__name__}: {str(ex)[:70]}")
             continue
+        rows, kills, cal = simulate(recs, arm, ticks=tuple(TICKS_UTC), depth=DEPTH_AWARE,
+                                    calibration=True)
         allrows += rows
         allcal += cal
         df = pd.DataFrame(rows)

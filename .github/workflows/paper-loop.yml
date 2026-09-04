@@ -50,6 +50,10 @@ jobs:
         if: steps.slot.outputs.slot != ''
         run: pip install -r requirements.txt
 
+      - name: Fresh ledger (another run may have pushed since checkout)
+        if: steps.slot.outputs.slot != ''
+        run: git pull -q --rebase origin main
+
       - name: Settle + record tick (all arms)
         if: steps.slot.outputs.slot != ''
         env:
@@ -71,7 +75,11 @@ jobs:
           else
             git add DASHBOARD.md
             git commit -m "paper tick $(date -u +'%F %H:%MZ')"
-            git pull --rebase origin main
+            if ! git pull --rebase origin main; then
+              # overlapping runs both appended: union-merge the ledgers, never drop a fill
+              python -m scripts.merge_ledger $(git diff --name-only --diff-filter=U)
+              GIT_EDITOR=true git rebase --continue
+            fi
             git push
           fi
 

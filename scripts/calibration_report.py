@@ -16,7 +16,7 @@ import sys
 from datetime import date
 
 from wx import cli, paper
-from scripts.run_live import LIVE_LEDGER, TICK_LOG
+from scripts.run_live import LIVE_LEDGER, TICK_DIR
 
 
 def main(window: int = 60):
@@ -34,13 +34,14 @@ def main(window: int = 60):
     return {"n": len(rows), "brier_model": round(bm, 4), "brier_market": round(bk, 4)}
 
 
-def bias(path=TICK_LOG):
+def bias(tick_dir=TICK_DIR):
     """Per-station mean (CLI high − μ) and >2σ miss rate, first quote of each day."""
-    if not path.exists():
+    files = sorted(tick_dir.glob("*.jsonl")) if tick_dir.exists() else []
+    if not files:
         print("no tick ledger yet")
         return {}
     first = {}
-    for line in path.read_text().splitlines():
+    for line in (l for f in files for l in f.read_text().splitlines()):
         r = json.loads(line)
         if "mu" in r and (r["icao"], r["target"]) not in first:
             first[(r["icao"], r["target"])] = r

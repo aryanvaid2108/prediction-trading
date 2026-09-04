@@ -23,7 +23,7 @@ on:
         default: ""
 
 permissions:
-  contents: write            # commit live_ledger.json + ticks.jsonl
+  contents: write            # commit live_ledger.json + ticks/
 
 concurrency:
   group: live                # never overlap a manual live.yml run
@@ -62,6 +62,10 @@ jobs:
           printf '%s' "${{ secrets.KALSHI_PRIVATE_KEY }}" > /tmp/kalshi.pem
           chmod 600 /tmp/kalshi.pem
 
+      - name: Fresh ledger (another run may have pushed since checkout)
+        if: steps.slot.outputs.slot != ''
+        run: git pull -q --rebase origin main
+
       - name: Place live orders
         if: steps.slot.outputs.slot != ''
         env:
@@ -81,12 +85,16 @@ jobs:
         run: |
           git config user.name "kalshi-weather-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .cache/live_ledger.json .cache/ticks.jsonl
+          git add .cache/live_ledger.json .cache/ticks
           if git diff --cached --quiet; then
             echo "nothing changed this run"
           else
             git commit -m "live tick $(date -u +'%F %H:%MZ')"
-            git pull --rebase origin main
+            if ! git pull --rebase origin main; then
+              # overlapping runs both appended: union-merge the ledgers, never drop a fill
+              python -m scripts.merge_ledger $(git diff --name-only --diff-filter=U)
+              GIT_EDITOR=true git rebase --continue
+            fi
             git push
           fi
 
