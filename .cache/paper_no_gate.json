@@ -1,1 +1,18 @@
-[]
+[
+  {
+    "ticker": "KXHIGHTSFO-26SEP04-B70.5",
+    "icao": "KSFO",
+    "target": "2026-09-04",
+    "side": "yes",
+    "lo": 70.0,
+    "hi": 71.0,
+    "price": 0.21,
+    "count": 34,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.5245,
+    "p_market": 0.20500000000000002
+  }
+]
