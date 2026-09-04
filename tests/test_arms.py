@@ -71,3 +71,17 @@ def test_paper_fill_is_capped_by_resting_depth():
     book = {"yes": [(0.68, 5.0), (0.67, 3.0)], "no": [(0.30, 40.0)]}   # only 5 at the touch, 8 within 1c
     d, count = run_daily.paper_fill(pick, MS[0], Q, strategies.CONTROL, book)
     assert d.price == 0.32 and count == 8
+
+
+def test_failed_station_gets_one_serial_retry(monkeypatch):
+    calls = []
+
+    def flaky(icao, target, now_utc):
+        calls.append(icao)
+        if icao == "KLAX" and calls.count("KLAX") == 1:
+            raise TimeoutError("mesonet 503")
+        return (Q, MS)
+
+    monkeypatch.setattr(run_live, "quote_station", flaky)
+    out = run_live.quote_all(["KLAX", "KAUS"], date(2026, 9, 4), datetime(2026, 9, 4, 19, tzinfo=timezone.utc))
+    assert not isinstance(out["KLAX"], Exception) and calls.count("KLAX") == 2

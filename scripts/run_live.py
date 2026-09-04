@@ -43,7 +43,7 @@ BALANCE_FLOOR = float(os.environ.get("LIVE_BALANCE_FLOOR", "0"))     # dollars; 
 SLOTS_UTC = tuple(int(h) for h in os.environ.get("LIVE_SLOTS_UTC", "15,17,19").split(","))
 SLOT_MINUTES = int(os.environ.get("LIVE_SLOT_MINUTES", str(strategies.SLOT_MINUTES)))
 CROSS = float(os.environ.get("LIVE_CROSS_CENTS", "1")) / 100   # cross the touch to fill now
-WORKERS = int(os.environ.get("WX_WORKERS", "3"))                # concurrent station quotes
+WORKERS = int(os.environ.get("WX_WORKERS", "2"))                # concurrent station quotes (IEM 503s at 6)
 MARKET_TZ = ZoneInfo("America/New_York")
 WINDOW_ET = (10, 16)
 LIVE_LEDGER = paper.LEDGER_DIR / "live_ledger.json"
@@ -109,15 +109,24 @@ def quote_station(icao, target, now_utc):
 
 
 def quote_all(icaos, target, now_utc, workers=None):
-    """{icao: (quote, markets) | Exception} — stations quoted concurrently."""
+    """{icao: (quote, markets) | Exception} — stations quoted concurrently, then
+    one serial retry for any that failed (IEM answered 503 to 3-4 stations when
+    both loops hit it at once; a quiet second pass usually succeeds)."""
     with ThreadPoolExecutor(max_workers=workers or WORKERS) as ex:
         futs = {ic: ex.submit(quote_station, ic, target, now_utc) for ic in icaos}
     out = {}
     for ic, fu in futs.items():
         try:
             out[ic] = fu.result()
-        except Exception as e:      # surfaced in the log, the tick ledger and the phone
+        except Exception as e:
             out[ic] = e
+    for ic, res in list(out.items()):
+        if isinstance(res, Exception):
+            print(f"  {ic}: retrying after {type(res).__name__}")
+            try:
+                out[ic] = quote_station(ic, target, now_utc)
+            except Exception as e:      # surfaced in the log, the tick ledger and the phone
+                out[ic] = e
     return out
 
 

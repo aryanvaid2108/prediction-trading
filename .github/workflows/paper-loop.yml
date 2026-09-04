@@ -2,11 +2,14 @@ name: paper-loop
 
 # Paper strategy arms (wx.strategies.ARMS): every tick each arm picks its own
 # thesis from ONE shared quote, filled at the live book's touch and depth-capped.
-# Same tick slots as live-loop (15Z / 17Z / 19Z, 75 min); the cron over-fires and
-# a cheap pre-check skips runs that GitHub delays past a slot.
+# Runs right AFTER each live-loop run (workflow_run fires within a minute, unlike
+# cron) so the two loops never hit IEM at the same time — running them in
+# parallel drew 503s on 3-4 stations. Same tick slots (15Z / 17Z / 19Z, 75 min):
+# the pre-check skips when the live run was itself an off-slot cron arrival.
 on:
-  schedule:
-    - cron: "*/15 11-20 * * *"
+  workflow_run:
+    workflows: ["live-loop"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       force:
