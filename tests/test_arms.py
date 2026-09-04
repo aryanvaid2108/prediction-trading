@@ -94,3 +94,13 @@ def test_ledger_union_keeps_both_sides_fills():
     a = [{"ticker": "A", "count": 10}, {"ticker": "B", "count": 5}]
     b = [{"ticker": "A", "count": 10}, {"ticker": "C", "count": 7}]
     assert union(a, b) == [{"ticker": "A", "count": 10}, {"ticker": "B", "count": 5}, {"ticker": "C", "count": 7}]
+
+
+def test_early_arm_sits_out_the_afternoon_slot(tmp_path, monkeypatch):
+    ledgers = {n: paper.Ledger(tmp_path / f"{n}.json") for n in strategies.ARMS}
+    monkeypatch.setattr(run_daily.kalshi, "orderbook",
+                        lambda t, session=None: {"yes": [(0.68, 50.0)], "no": [(0.30, 50.0)]})
+    out = run_daily.record(ledgers, "KAUS", date(2026, 8, 29), Q, MS, {}, None, slot=19)
+    assert "early" not in out and "control" in out
+    out = run_daily.record(ledgers, "KAUS", date(2026, 8, 30), Q, MS, {}, None, slot=15)
+    assert "early" in out

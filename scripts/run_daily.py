@@ -39,14 +39,14 @@ def paper_fill(pick, market, quote, arm, book):
     return (pick2, count) if count >= 1 else None
 
 
-def record(ledgers, icao, target, q, ms, books, session):
+def record(ledgers, icao, target, q, ms, books, session, slot=None):
     """Let every arm decide on one station's quote; returns {arm: fill or None}."""
     key = target.isoformat()
     by = {m["ticker"]: m for m in ms}
     out = {}
     for name, arm in strategies.ARMS.items():
         led = ledgers[name]
-        if led.has_positions(icao, key):
+        if led.has_positions(icao, key) or (slot is not None and slot not in arm.ticks):
             continue
         pick, _ = strategies.select(ms, q, BANKROLL, arm)
         if pick is None:
@@ -105,7 +105,7 @@ def tick(icaos, now_utc=None):
             continue
         q, ms = res
         print(f"  {icao}: μ={q.mu:.1f} σ={q.sigma:.2f} obs_max={q.observed_max} intraday={q.intraday_active}")
-        record(ledgers, icao, target, q, ms, books, session)
+        record(ledgers, icao, target, q, ms, books, session, slot)
     for led in ledgers.values():
         led.save()
     for name, led in ledgers.items():

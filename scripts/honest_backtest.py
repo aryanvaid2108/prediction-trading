@@ -189,13 +189,14 @@ def load_snapshot(ic, start, end, rng=None):
     return out
 
 
-def simulate(recs, arm, ticks=ALL_TICKS, depth=True, slip=SLIP, bankroll=BANKROLL,
+def simulate(recs, arm, ticks=None, depth=True, slip=SLIP, bankroll=BANKROLL,
              kelly=KELLY, maxc=MAXC, exclude=(), calibration=False):
     """Replay one arm over snapshot records. Returns (trade rows, gate kills, cal rows).
     One thesis per station per day: the first tick with a gated survivor trades."""
     rows, kills, cal = [], 0, []
     arm_kw = dict(vars(arm)); arm_kw["kelly_frac"] = kelly
     arm = strategies.Arm(**arm_kw)
+    ticks = arm.ticks if ticks is None else ticks
     traded = set()
     for r in recs:
         if r["icao"] in exclude or r["hour_utc"] not in ticks:
