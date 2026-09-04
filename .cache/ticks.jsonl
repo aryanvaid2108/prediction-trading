@@ -5,3 +5,10 @@
 {"ts": "2026-09-04T19:01:26+00:00", "slot": 19, "target": "2026-09-04", "icao": "KSFO", "error": "HTTPError: 503 Server Error: Service Unavailable for url: https://mesonet.agron.iastate.edu"}
 {"ts": "2026-09-04T19:01:26+00:00", "slot": 19, "target": "2026-09-04", "icao": "KDEN", "mu": 92.6, "sigma": 1.034, "obs_max": 88.0, "intraday": true, "cands": [], "pick": null}
 {"ts": "2026-09-04T19:01:26+00:00", "slot": 19, "target": "2026-09-04", "icao": "KPHL", "error": "HTTPError: 503 Server Error: Service Unavailable for url: https://mesonet.agron.iastate.edu"}
+{"ts": "2026-09-04T19:12:27+00:00", "slot": 19, "target": "2026-09-04", "icao": "KNYC", "mu": 83.98, "sigma": 0.915, "obs_max": 83.0, "intraday": true, "cands": [], "pick": null}
+{"ts": "2026-09-04T19:12:27+00:00", "slot": 19, "target": "2026-09-04", "icao": "KMDW", "mu": 92.81, "sigma": 1.724, "obs_max": 90.0, "intraday": true, "cands": [], "pick": null}
+{"ts": "2026-09-04T19:12:27+00:00", "slot": 19, "target": "2026-09-04", "icao": "KAUS", "mu": 90.16, "sigma": 2.361, "obs_max": 86.0, "intraday": true, "cands": [], "pick": null}
+{"ts": "2026-09-04T19:12:27+00:00", "slot": 19, "target": "2026-09-04", "icao": "KLAX", "mu": 77.99, "sigma": 0.466, "obs_max": 77.0, "intraday": true, "cands": [], "pick": null}
+{"ts": "2026-09-04T19:12:27+00:00", "slot": 19, "target": "2026-09-04", "icao": "KSFO", "mu": 71.35, "sigma": 1.149, "obs_max": 68.0, "intraday": true, "cands": [{"ticker": "KXHIGHTSFO-26SEP04-B70.5", "side": "yes", "ask": 0.26, "p_model": 0.5245, "p_market": 0.25, "ev": 2.57, "worst_edge": -0.243, "gated": false}], "pick": null}
+{"ts": "2026-09-04T19:12:27+00:00", "slot": 19, "target": "2026-09-04", "icao": "KDEN", "mu": 92.6, "sigma": 1.034, "obs_max": 88.0, "intraday": true, "cands": [], "pick": null}
+{"ts": "2026-09-04T19:12:27+00:00", "slot": 19, "target": "2026-09-04", "icao": "KPHL", "mu": 89.04, "sigma": 0.715, "obs_max": 88.0, "intraday": true, "cands": [], "pick": null}
