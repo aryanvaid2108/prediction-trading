@@ -388,8 +388,13 @@ function draw(){
   const note=document.getElementById("envnote");
   if(live && !d.positions.length)
     note.innerHTML='<div class="envnote">No <b>live</b> trades yet — the bot is running in <b>paper</b>. Promote a strategy to prod to populate this view.</div>';
-  else if(!live)
-    note.innerHTML='<div class="envnote">📎 <b>Paper</b> — a sandbox for testing new strategies before promoting them to <b>Live</b>. No real money.</div>';
+  else if(!live){
+    const arms=RAW.arms||{};
+    const rows=Object.keys(arms).map(k=>{const a=arms[k];
+      return `<tr><td><b>${k}</b></td><td style="text-align:right">$${(a.realized_pnl||0).toFixed(2)}</td><td style="text-align:right">${a.roi==null?"—":(a.roi*100).toFixed(1)+"%"}</td><td style="text-align:right">${a.win_rate==null?"—":Math.round(a.win_rate*100)+"%"}</td><td style="text-align:right">${a.closed}</td><td style="text-align:right">${a.open}</td></tr>`}).join("");
+    note.innerHTML='<div class="envnote">📎 <b>Paper arms</b> — the control arm mirrors live; every other arm changes one parameter. Fills at the live book, depth-capped. No real money.'
+      +(rows?`<table style="margin-top:8px;font-size:12px;border-collapse:collapse"><tr><th style="text-align:left">arm</th><th>P&amp;L</th><th>ROI</th><th>win</th><th>closed</th><th>open</th></tr>${rows}</table>`:"")+'</div>';
+  }
   else note.innerHTML="";
   renderCards(d); renderMap(d); renderTemp(d); renderMarks(d); renderEquity(d); renderTables(d);
 }

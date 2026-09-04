@@ -74,6 +74,31 @@ def maker_price(market: dict, side: str):
     return bid
 
 
+def book_touch(book: dict, side: str, cross: float = 0.0):
+    """(ask, depth) to BUY `side` right now from a kalshi.orderbook() book: the
+    best resting bid on the other side sets the ask (1 - bid); depth is the
+    contracts resting at every level up to ask + cross (what an IOC crossing by
+    `cross` can actually take)."""
+    bids = book.get("no" if side == "yes" else "yes") or []
+    if not bids:
+        return None, 0
+    ask = round(1.0 - bids[0][0], 4)
+    limit = ask + cross + 1e-9
+    depth = sum(q for p, q in bids if 1.0 - p <= limit)
+    return ask, int(depth)
+
+
+def refresh_market(market: dict, book: dict) -> dict:
+    """Market dict with its summary quotes replaced by the live book's touch."""
+    m = dict(market)
+    ya, _ = book_touch(book, "yes")
+    na, _ = book_touch(book, "no")
+    m["yes_ask"], m["no_ask"] = ya, na
+    m["yes_bid"] = round(1.0 - na, 4) if na is not None else None
+    m["no_bid"] = round(1.0 - ya, 4) if ya is not None else None
+    return m
+
+
 def gaussian_prob(mu: float, sigma: float):
     """A prob_fn(lo, hi) for a Gaussian predictive — the simple EMOS case."""
     return lambda lo, hi: prob_range(mu, sigma, lo, hi)

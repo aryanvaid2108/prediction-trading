@@ -1,8 +1,8 @@
 """LIVE trading driver — places REAL Kalshi orders. Handle with care.
 
-Same model/decision logic as the paper runner (run_daily), sized to a real
-bankroll, with a hard total-stake cap so combined orders can never exceed your
-balance. Maker limit orders (they rest in the book and may not all fill).
+Same selector as the paper arms (wx.strategies), sized to a real bankroll, with
+a hard total-stake cap so combined orders can never exceed your balance.
+Marketable IOC orders re-priced against the live order book right before sending.
 
 Modes (via the LIVE env var):
   LIVE unset / 0  -> PREVIEW: compute and print the exact order plan, place NOTHING.
@@ -15,32 +15,41 @@ Usage:
   python -m scripts.run_live [ICAO ...]            preview (default) or place if LIVE=1
   python -m scripts.run_live reconcile             rebuild live_ledger.json from Kalshi
 """
+import json
 import os
 import sys
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
 
-from wx import kalshi, paper, pipeline, stations, trading
+from wx import kalshi, paper, pipeline, stations, strategies, trading
 from wx.stations import get
 
 BANKROLL = float(os.environ.get("LIVE_BANKROLL", "750"))
 MAX_TOTAL_STAKE = float(os.environ.get("LIVE_MAX_STAKE", str(BANKROLL)))  # combined cap
 PER_STATION_FRAC = float(os.environ.get("LIVE_STATION_FRAC", "0.25"))     # diversify
 MAX_ORDERS = int(os.environ.get("LIVE_MAX_ORDERS") or "0")                # 0 = unlimited (smoke-test with 1)
-MIN_EDGE = float(os.environ.get("LIVE_MIN_EDGE", "0.05"))  # above measured calibration slack
-MIN_PRICE = float(os.environ.get("LIVE_MIN_PRICE", "0.15"))  # no sub-15c longshots (Aug 25-26: all lost)
-RATIO_CAP = float(os.environ.get("LIVE_RATIO_CAP", "2.5"))   # max p/ask disagreement we trust
-MODEL_W = float(os.environ.get("LIVE_MODEL_WEIGHT", "0.5"))  # shrink toward market until Brier earns it up
+ARM = strategies.Arm(
+    "live",
+    min_edge=float(os.environ.get("LIVE_MIN_EDGE", "0.05")),
+    min_price=float(os.environ.get("LIVE_MIN_PRICE", "0.15")),
+    ratio_cap=float(os.environ.get("LIVE_RATIO_CAP", "2.5")),
+    model_weight=float(os.environ.get("LIVE_MODEL_WEIGHT", "0.5")),
+)
 DAILY_LOSS_CAP = float(os.environ.get("LIVE_DAILY_LOSS_CAP", "15"))  # 10% of canary bankroll
 BALANCE_FLOOR = float(os.environ.get("LIVE_BALANCE_FLOOR", "0"))     # dollars; 0 = check off
-KELLY = 0.25
-ROBUST_DELTA = 1.5   # edge must survive the mean being off by this many °F
+SLOTS_UTC = tuple(int(h) for h in os.environ.get("LIVE_SLOTS_UTC", "15,17,19").split(","))
+SLOT_MINUTES = int(os.environ.get("LIVE_SLOT_MINUTES", str(strategies.SLOT_MINUTES)))
+CROSS = float(os.environ.get("LIVE_CROSS_CENTS", "1")) / 100   # cross the touch to fill now
+WORKERS = int(os.environ.get("WX_WORKERS", "3"))                # concurrent station quotes
 MARKET_TZ = ZoneInfo("America/New_York")
 WINDOW_ET = (10, 16)
-LIVE_LEDGER = paper.LEDGER.parent / "live_ledger.json"
-NOTIFY_FILE = paper.LEDGER.parent / "live_notify.txt"
+LIVE_LEDGER = paper.LEDGER_DIR / "live_ledger.json"
+TICK_LOG = paper.LEDGER_DIR / "ticks.jsonl"       # every quote + candidate, auditable
+LOG_TICKS = os.environ.get("LIVE") in ("1", "true", "yes")   # previews stay out of the committed log
+NOTIFY_FILE = paper.LEDGER_DIR / "live_notify.txt"
 DEFAULT_STATIONS = stations.ACTIVE
 
 
@@ -66,6 +75,8 @@ class Order:
     maker: bool
     p_model: float = None
     p_market: float = None
+    market: dict = None       # summary quote the plan was built from
+    quote: object = None      # LiveQuote, to re-select on the live book
 
 
 def risk_gate(led, target, loss_cap=None, resume=None):
@@ -91,49 +102,86 @@ def risk_gate(led, target, loss_cap=None, resume=None):
     return True, f"last settled day {last}: ${days[last]:+.2f}" + (" (breach expired)" if stale and days[last] <= -loss_cap else "")
 
 
-def build_plan(icaos, target, now_utc, led):
-    """ONE robust thesis per station per day.
+def quote_station(icao, target, now_utc):
+    """(quote, markets) for one station — the slow, network-bound part of a tick."""
+    st = get(icao)
+    return pipeline.quote_live(st, target, now_utc=now_utc), kalshi.markets(st.kalshi, target)
+
+
+def quote_all(icaos, target, now_utc, workers=None):
+    """{icao: (quote, markets) | Exception} — stations quoted concurrently."""
+    with ThreadPoolExecutor(max_workers=workers or WORKERS) as ex:
+        futs = {ic: ex.submit(quote_station, ic, target, now_utc) for ic in icaos}
+    out = {}
+    for ic, fu in futs.items():
+        try:
+            out[ic] = fu.result()
+        except Exception as e:      # surfaced in the log, the tick ledger and the phone
+            out[ic] = e
+    return out
+
+
+def log_tick(rec):
+    """Append one station-tick record — μ/σ/floor and every candidate with its
+    gate verdict — so 'cands=1 gated=0' is auditable after the fact."""
+    if not LOG_TICKS:
+        return
+    TICK_LOG.parent.mkdir(exist_ok=True)
+    with open(TICK_LOG, "a") as fh:
+        fh.write(json.dumps(rec) + "\n")
+
+
+def build_plan(icaos, target, now_utc, led, quotes=None, slot=None):
+    """ONE robust thesis per station per day. Returns (orders, stake, errors).
 
     A station that already holds any position today is skipped (no bucket
     stacking, no YES-low+NO-high double-hits — one directional error can only
-    cost one bet). Candidates must clear min_edge AND keep positive edge with
-    the predictive mean shifted ±ROBUST_DELTA (a bet that dies from a 1.5° miss
-    isn't a bet). The single highest-EV survivor is taken."""
+    cost one bet). Candidates must clear the arm's filters AND keep positive edge
+    with the predictive mean shifted ±robust_delta (a bet that dies from a 1.5°
+    miss isn't a bet). The single highest-EV survivor is taken."""
     key = target.isoformat()
-    plan = []
-    for icao in icaos:
-        try:
-            st = get(icao)
-            if led.has_positions(st.icao, key):                       # one thesis per day
-                continue
-            q = pipeline.quote_live(st, target, now_utc=now_utc)
-            ms = kalshi.markets(st.kalshi, target)
-            by = {m["ticker"]: m for m in ms}
-            cands = trading.decisions_for(ms, q.prob_fn, BANKROLL, min_edge=MIN_EDGE, kelly_frac=KELLY,
-                                          min_price=MIN_PRICE, ratio_cap=RATIO_CAP, model_weight=MODEL_W)
-            imp = trading.market_implied_mean(ms)
-            toward = (imp - q.mu) if imp is not None else None
-            gated = [d for d in cands
-                     if q.shift_fn is None
-                     or trading.robust_edge(by[d.ticker], d.side, q.shift_fn, ROBUST_DELTA,
-                                            toward=toward) > 0]
-            # per-station diagnostic — makes every quote auditable from the run log
-            print(f"  {icao}: μ={q.mu:.1f} σ={q.sigma:.2f} obs_max={q.observed_max} "
-                  f"intraday={q.intraday_active} cands={len(cands)} gated={len(gated)}")
-            if not gated:
-                continue
-            d = max(gated, key=lambda x: x.ev)
-            station_cap = PER_STATION_FRAC * BANKROLL
-            if d.count * d.price > station_cap:
-                d.count = int(station_cap / d.price)
-            if d.count < 1:
-                continue
-            m = by[d.ticker]
-            lo, hi = trading.market_bounds(m["strike_type"], m.get("floor"), m.get("cap"))
-            plan.append(Order(icao, d.ticker, d.side, lo, hi, d.price, d.count, maker=False,
-                              p_model=d.model_prob, p_market=d.market_prob))
-        except Exception:
-            print(f"  {icao}: ERROR\n{traceback.format_exc()}")
+    todo = [ic for ic in icaos if not led.has_positions(ic, key)]     # one thesis per day
+    quotes = quotes if quotes is not None else quote_all(todo, target, now_utc)
+    plan, errors = [], {}
+    for icao in todo:
+        res = quotes.get(icao)
+        base = {"ts": now_utc.isoformat(timespec="seconds"), "slot": slot, "target": key, "icao": icao}
+        if isinstance(res, Exception) or res is None:
+            err = f"{type(res).__name__}: {str(res)[:80]}" if res is not None else "no quote"
+            print(f"  {icao}: ERROR {err}")
+            errors[icao] = type(res).__name__ if res is not None else "no quote"
+            log_tick({**base, "error": err})
+            continue
+        q, ms = res
+        by = {m["ticker"]: m for m in ms}
+        pick, cands = strategies.select(ms, q, BANKROLL, ARM)
+        print(f"  {icao}: μ={q.mu:.1f} σ={q.sigma:.2f} obs_max={q.observed_max} "
+              f"intraday={q.intraday_active} cands={len(cands)} gated={sum(c.gated for c in cands)}")
+        for c in cands:
+            d = c.decision
+            print(f"      {d.ticker} {d.side.upper():3} ask={d.price:.2f} p_model={d.model_prob:.2f} "
+                  f"p_mkt={d.market_prob if d.market_prob is None else round(d.market_prob, 2)} "
+                  f"ev=${d.ev:.2f} gate={'PASS' if c.gated else 'KILL'} ({c.worst_edge:+.3f})")
+        log_tick({**base, "mu": round(q.mu, 2), "sigma": round(q.sigma, 3),
+                  "obs_max": q.observed_max, "intraday": q.intraday_active,
+                  "cands": [{"ticker": c.decision.ticker, "side": c.decision.side,
+                             "ask": c.decision.price, "p_model": round(c.decision.model_prob, 4),
+                             "p_market": c.decision.market_prob, "ev": round(c.decision.ev, 2),
+                             "worst_edge": None if c.worst_edge == float("inf") else round(c.worst_edge, 4),
+                             "gated": c.gated} for c in cands],
+                  "pick": pick.ticker if pick else None})
+        if not pick:
+            continue
+        d = pick
+        station_cap = PER_STATION_FRAC * BANKROLL
+        if d.count * d.price > station_cap:
+            d.count = int(station_cap / d.price)
+        if d.count < 1:
+            continue
+        m = by[d.ticker]
+        lo, hi = trading.market_bounds(m["strike_type"], m.get("floor"), m.get("cap"))
+        plan.append(Order(icao, d.ticker, d.side, lo, hi, d.price, d.count, maker=False,
+                          p_model=d.model_prob, p_market=d.market_prob, market=m, quote=q))
     # global cap across all stations, net of what is already staked live today
     total_left = MAX_TOTAL_STAKE - sum(f.count * f.price for f in led.fills if f.target == key)
     kept, spent = [], 0.0
@@ -142,7 +190,7 @@ def build_plan(icaos, target, now_utc, led):
         if spent + stake > total_left:
             continue
         kept.append(o); spent += stake
-    return kept, spent
+    return kept, spent, errors
 
 
 def bucket(o):
@@ -188,15 +236,38 @@ def _parse_fill(response, side, planned_price):
     return filled, avg_cost, fee_total
 
 
-def place(plan, target, led, now_et):
+def reprice(o, book):
+    """Re-select on the live book right before sending; None if the order no
+    longer qualifies there. The plan was built from the market summary, which
+    lags the book: Sep 3 a 16.5c mid filled at 10.5c (below the price floor,
+    p/ask 6x over the ratio cap) and two other orders found no ask at all.
+    Size is capped at the contracts actually resting within the cross."""
+    m2 = trading.refresh_market(o.market, book)
+    pick, _ = strategies.select([m2], o.quote, BANKROLL, ARM)
+    ask, depth = trading.book_touch(book, o.side, CROSS)
+    if pick is None or pick.side != o.side:
+        print(f"  ✗ {o.icao} {o.side.upper()} {bucket(o)} book moved: touch {ask} "
+              f"(planned {o.price:.2f}) — no longer qualifies, not sent")
+        return None
+    o.price, o.p_market = pick.price, pick.market_prob
+    o.count = min(o.count, pick.count, depth, int(PER_STATION_FRAC * BANKROLL / o.price))
+    if o.count < 1:
+        print(f"  ✗ {o.icao} {o.side.upper()} {bucket(o)} no depth at {ask} — not sent")
+        return None
+    return o
+
+
+def place(plan, target, led, now_et, errors=None):
     key = target.isoformat()
     session = kalshi._session()
-    cross = float(os.environ.get("LIVE_CROSS_CENTS", "1")) / 100   # cross the touch to fill now
     placed, failed, total = [], [], 0
     print(f"\nPLACING {len(plan)} LIVE marketable/IOC orders…\n")
     for o in plan:
-        px = max(0.01, min(0.99, round(o.price + cross, 2)))       # marketable limit
         try:
+            o = reprice(o, kalshi.orderbook(o.ticker, session=session))
+            if o is None:
+                continue
+            px = max(0.01, min(0.99, round(o.price + CROSS, 2)))       # marketable limit
             res = kalshi.place_order(o.ticker, o.side, o.count, px, live=True,
                                      session=session, time_in_force="immediate_or_cancel")
             filled, avg_cost, fee_total = _parse_fill(res.response, o.side, o.price)
@@ -222,6 +293,7 @@ def place(plan, target, led, now_et):
         L.append("  " + " · ".join(f"{ic.replace('K','')} {n}" for ic, n in sorted(byst.items())))
     if failed:
         L.append(f"⚠️ {len(failed)} failed to place")
+    L += _error_lines(errors)
     try:
         bal = kalshi.balance(session=session).get("balance")
         if bal is not None:
@@ -229,6 +301,13 @@ def place(plan, target, led, now_et):
     except Exception:
         pass
     _write_notify("\n".join(L))
+
+
+def _error_lines(errors):
+    """A station that failed to quote must never read as 'no edge' on the phone."""
+    if not errors:
+        return []
+    return ["⚠️ quote ERROR " + " · ".join(f"{ic} ({e})" for ic, e in sorted(errors.items()))]
 
 
 def reconcile():
@@ -293,9 +372,11 @@ def main(*args):
     now_et = now_utc.astimezone(MARKET_TZ)
     target = now_et.date()
     live = os.environ.get("LIVE") in ("1", "true", "yes")
+    force = os.environ.get("LIVE_FORCE") == "1" or os.environ.get("LIVE_RESUME") == "1"   # manual dispatch: ignore the slot, keep the window
     inwin = WINDOW_ET[0] <= now_et.hour < WINDOW_ET[1]
+    slot = strategies.slot_for(now_utc, SLOTS_UTC, SLOT_MINUTES)
     print(f"run_live {now_utc.isoformat(timespec='seconds')} ({now_et:%H:%M} ET, "
-          f"{'in' if inwin else 'OUT OF'} window) target={target} mode={'LIVE' if live else 'PREVIEW'}")
+          f"{'in' if inwin else 'OUT OF'} window, slot={slot}) target={target} mode={'LIVE' if live else 'PREVIEW'}")
 
     led = paper.Ledger(LIVE_LEDGER)
     try:
@@ -303,10 +384,15 @@ def main(*args):
     except Exception as e:
         print(f"settle failed (non-fatal, will retry next run): {type(e).__name__}: {e}")
     if live and not inwin:
-        # scheduled at the morning tick; a delayed cron firing off-window should NOT
-        # place real orders unattended. Manual dispatch can still preview any time.
+        # a delayed cron firing off-window should NOT place real orders unattended
         print("outside 10:00-16:00 ET window — skipping live placement (safety).")
         _write_notify(f"🕙 {now_et:%H:%M} ET — outside trading window, no live orders placed.")
+        return
+    if live and slot is None and not force:
+        # the edge is morning-shaped; a cron that lands between slots is not a tick
+        slots = "/".join(f"{s:02d}Z" for s in SLOTS_UTC)
+        print(f"outside every tick slot ({slots} +{SLOT_MINUTES}m) — skipping placement.")
+        _write_notify(f"🕙 {now_et:%H:%M} ET — outside tick slots ({slots}), nothing placed.")
         return
     if not inwin:
         print("WARNING: outside the window — preview only; edges are weaker.")
@@ -327,7 +413,7 @@ def main(*args):
         except Exception as e:
             print(f"balance check failed (continuing): {type(e).__name__}: {e}")
 
-    plan, spent = build_plan(icaos, target, now_utc, led)
+    plan, spent, errors = build_plan(icaos, target, now_utc, led, slot=slot)
     if MAX_ORDERS and len(plan) > MAX_ORDERS:
         plan = plan[:MAX_ORDERS]
         spent = sum(o.count * o.price for o in plan)
@@ -335,10 +421,12 @@ def main(*args):
     if not plan:
         print("no qualifying edges (or caps already reached) — nothing to do.")
         if live:
-            _write_notify(f"🟡 {now_et:%H:%M} ET — no new edge, nothing placed (already hold today's picks or caps hit).")
+            _write_notify("\n".join(
+                [f"🟡 {now_et:%H:%M} ET — no new edge, nothing placed (already hold today's picks or caps hit)."]
+                + _error_lines(errors)))
         return
     if live:
-        place(plan, target, led, now_et)
+        place(plan, target, led, now_et, errors)
     else:
         preview(plan, spent)
 

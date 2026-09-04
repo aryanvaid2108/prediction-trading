@@ -1,20 +1,20 @@
 name: paper-loop
 
-# Three intraday ticks a day. Crons are UTC; the times below are ET during
-# summer (EDT). run_daily only records inside the 10:00-16:00 ET window and
-# settles finished days always, so off-window fires are harmless.
+# Paper strategy arms (wx.strategies.ARMS): every tick each arm picks its own
+# thesis from ONE shared quote, filled at the live book's touch and depth-capped.
+# Same tick slots as live-loop (15Z / 17Z / 19Z, 75 min); the cron over-fires and
+# a cheap pre-check skips runs that GitHub delays past a slot.
 on:
-  # Times are off the top-of-hour on purpose: GitHub delays :00 crons most under
-  # load. Delays of a few minutes are normal and fine (weather is slow); the
-  # 10:00-16:00 ET window guard absorbs them.
   schedule:
-    - cron: "30 14 * * *"   # ~10:30 ET  first in-window read
-    - cron: "10 17 * * *"   # ~13:10 ET  tightening
-    - cron: "40 18 * * *"   # ~14:40 ET  sharpest, near the edge peak
-  workflow_dispatch: {}      # allow manual runs from the Actions tab
+    - cron: "*/15 11-20 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Set to 1 to record a tick outside a slot (still inside 10-16 ET)"
+        default: ""
 
 permissions:
-  contents: write            # so the job can commit the ledger back
+  contents: write            # so the job can commit the ledgers back
 
 concurrency:
   group: paper-loop
@@ -24,37 +24,56 @@ jobs:
   tick:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Tick-slot pre-check
+        id: slot
+        run: |
+          M=$((10#$(date -u +%H) * 60 + 10#$(date -u +%M)))
+          SLOT=""
+          for S in 15 17 19; do
+            if [ "$M" -ge $((S * 60)) ] && [ "$M" -lt $((S * 60 + 75)) ]; then SLOT="$S"; fi
+          done
+          if [ -n "${{ inputs.force }}" ]; then SLOT="manual"; fi
+          echo "now $(date -u +%H:%M)Z -> slot='${SLOT}'"
+          echo "slot=$SLOT" >> "$GITHUB_OUTPUT"
 
+      - uses: actions/checkout@v4
+        if: steps.slot.outputs.slot != ''
       - uses: actions/setup-python@v5
+        if: steps.slot.outputs.slot != ''
         with:
           python-version: "3.12"
-
+          cache: pip
       - name: Install dependencies
+        if: steps.slot.outputs.slot != ''
         run: pip install -r requirements.txt
 
-      - name: Settle + record tick
-        run: python -m scripts.run_daily   # defaults to the active station list
+      - name: Settle + record tick (all arms)
+        if: steps.slot.outputs.slot != ''
+        env:
+          PAPER_FORCE: ${{ inputs.force }}
+        run: python -m scripts.run_daily
 
       - name: Update dashboard
-        run: python -m scripts.dashboard   # writes DASHBOARD.md + the Actions run summary
+        if: steps.slot.outputs.slot != ''
+        run: python -m scripts.dashboard
 
-      - name: Commit only when the ledger actually changed
+      - name: Commit only when a ledger actually changed
+        if: steps.slot.outputs.slot != ''
         run: |
           git config user.name "kalshi-weather-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .cache/paper_ledger.json
+          git add .cache/paper_*.json
           if git diff --cached --quiet; then
             echo "no ledger change this tick — not committing"
           else
-            git add DASHBOARD.md            # refresh the dashboard alongside a real change
+            git add DASHBOARD.md
             git commit -m "paper tick $(date -u +'%F %H:%MZ')"
             git pull --rebase origin main
             git push
           fi
 
       - name: Notify phone (ntfy)
-        if: always()          # also pings on failure
+        if: always() && steps.slot.outputs.slot != ''
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
@@ -64,6 +83,6 @@ jobs:
           fi
           MSG="$(python -m scripts.notify 2>/dev/null || echo 'tick ran')"
           curl -s \
-            -H "Title: paper-loop ${{ job.status }}" \
+            -H "Title: paper arms ${{ job.status }}" \
             -H "Tags: chart_with_upwards_trend" \
             -d "$MSG" "https://ntfy.sh/$NTFY_TOPIC" > /dev/null

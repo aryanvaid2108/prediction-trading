@@ -1,25 +1,29 @@
 name: live-loop
 
-# AUTONOMOUS REAL-MONEY TRADING. Three intraday ticks a day: each re-quotes with
-# fresher observations and adds any NEW edge the sharper forecast reveals. Safe to
-# fire repeatedly: run_live is idempotent (won't re-buy a held bucket) and capped
-# ($750 total / 25% per station per day), so later ticks are purely additive within
-# budget. Refuses to place outside the 10:00-16:00 ET window.
+# AUTONOMOUS REAL-MONEY TRADING. Placement is allowed only inside a tick slot
+# (15Z / 17Z / 19Z, 75 min each — the hours where the model's Brier lead over the
+# book was measured). GitHub cron fired every tick 2.5-3.3 h late during Aug
+# 28-Sep 4 (the morning tick never ran in-slot, the afternoon one always landed
+# outside the trading window), so the schedule over-fires every 15 min and a
+# cheap pre-check skips runs that land between slots before anything installs.
+# run_live is idempotent (won't re-buy a held bucket) and capped, so several
+# in-slot runs are purely additive within budget.
 #
 # Kill switch: disable this workflow in the Actions tab (top-right "..." > Disable).
 on:
   schedule:
-    - cron: "30 14 * * *"   # ~10:30 ET / 8:00pm IST  — morning, biggest edge
-    - cron: "10 17 * * *"   # ~13:10 ET / 10:40pm IST — tightening
-    - cron: "40 18 * * *"   # ~14:40 ET / 12:10am IST — sharpest, near edge peak
+    - cron: "*/15 11-20 * * *"   # over-fire; only in-slot arrivals do anything
   workflow_dispatch:
     inputs:
       resume:
         description: "Set to 1 to clear the daily-loss kill-switch for this run"
         default: ""
+      force:
+        description: "Set to 1 to trade outside a tick slot (still inside 10-16 ET)"
+        default: ""
 
 permissions:
-  contents: write            # commit live_ledger.json
+  contents: write            # commit live_ledger.json + ticks.jsonl
 
 concurrency:
   group: live                # never overlap a manual live.yml run
@@ -29,19 +33,37 @@ jobs:
   trade:
     runs-on: ubuntu-latest
     steps:
+      - name: Tick-slot pre-check
+        id: slot
+        run: |
+          M=$((10#$(date -u +%H) * 60 + 10#$(date -u +%M)))
+          SLOT=""
+          for S in 15 17 19; do
+            if [ "$M" -ge $((S * 60)) ] && [ "$M" -lt $((S * 60 + 75)) ]; then SLOT="$S"; fi
+          done
+          if [ -n "${{ inputs.force }}" ] || [ -n "${{ inputs.resume }}" ]; then SLOT="manual"; fi
+          echo "now $(date -u +%H:%M)Z -> slot='${SLOT}'"
+          echo "slot=$SLOT" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v4
+        if: steps.slot.outputs.slot != ''
       - uses: actions/setup-python@v5
+        if: steps.slot.outputs.slot != ''
         with:
           python-version: "3.12"
+          cache: pip
       - name: Install dependencies
+        if: steps.slot.outputs.slot != ''
         run: pip install -r requirements.txt
 
       - name: Write Kalshi private key
+        if: steps.slot.outputs.slot != ''
         run: |
           printf '%s' "${{ secrets.KALSHI_PRIVATE_KEY }}" > /tmp/kalshi.pem
           chmod 600 /tmp/kalshi.pem
 
       - name: Place live orders
+        if: steps.slot.outputs.slot != ''
         env:
           KALSHI_ACCESS_KEY: ${{ secrets.KALSHI_ACCESS_KEY }}
           KALSHI_PRIVATE_KEY_PATH: /tmp/kalshi.pem
@@ -51,23 +73,25 @@ jobs:
           # restore the full $750 bankroll.
           LIVE_BANKROLL: "150"
           LIVE_RESUME: ${{ inputs.resume }}
+          LIVE_FORCE: ${{ inputs.force }}
         run: python -m scripts.run_live
 
-      - name: Commit live ledger if it changed
+      - name: Commit live ledger + tick log if they changed
+        if: steps.slot.outputs.slot != ''
         run: |
           git config user.name "kalshi-weather-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .cache/live_ledger.json
+          git add .cache/live_ledger.json .cache/ticks.jsonl
           if git diff --cached --quiet; then
-            echo "no live orders placed this run"
+            echo "nothing changed this run"
           else
-            git commit -m "live orders $(date -u +'%F %H:%MZ')"
+            git commit -m "live tick $(date -u +'%F %H:%MZ')"
             git pull --rebase origin main
             git push
           fi
 
       - name: Notify phone (ntfy)
-        if: always()
+        if: always() && steps.slot.outputs.slot != ''
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |

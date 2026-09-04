@@ -1,16 +1,14 @@
-"""Render a monitoring dashboard from the paper-trading ledger.
-
-Writes DASHBOARD.md (rendered natively on the GitHub repo page) and, when running
-inside GitHub Actions, a short summary to the run page. Regenerated every tick.
+"""Render DASHBOARD.md from the paper-arm ledgers: one comparison table (every
+arm vs the control), then the control arm's detail. Regenerated every tick.
 
 Usage: python -m scripts.dashboard
 """
 import os
 from datetime import datetime, timezone
 
-from wx import paper, stations
+from wx import paper, stations, strategies
 
-BANKROLL = 1000.0
+BANKROLL = 150.0
 
 
 def bucket(f) -> str:
@@ -21,34 +19,39 @@ def bucket(f) -> str:
     return f"{int(f.lo)}–{int(f.hi)}°"
 
 
-def build(led: paper.Ledger) -> str:
-    s = led.summary()
+def _fmt(s):
+    roi = f"{s['roi']*100:+.1f}%" if s["roi"] is not None else "—"
+    wr = f"{s['win_rate']*100:.0f}%" if s["win_rate"] is not None else "—"
+    return f"${s['realized_pnl']:+.2f}", roi, wr
+
+
+def build(ledgers: dict) -> str:
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    L = ["# 📈 Paper strategy arms\n",
+         f"_Updated {now} · bankroll ${BANKROLL:.0f} per arm · stations "
+         f"{' · '.join(stations.ACTIVE)} · fills at the live book's touch, depth-capped · "
+         f"no live orders placed_\n",
+         "| Arm | Differs from control | Realized P&L | ROI (on stake) | Win rate | Closed | Open |",
+         "|:--|:--|---:|---:|---:|---:|---:|"]
+    ctrl = strategies.CONTROL
+    for name, led in ledgers.items():
+        arm = strategies.ARMS[name]
+        diff = ", ".join(f"{k}={v}" for k, v in vars(arm).items()
+                         if k != "name" and v != getattr(ctrl, k)) or "— (live config)"
+        s = led.summary()
+        realized, roi, wr = _fmt(s)
+        L.append(f"| **{name}** | {diff} | **{realized}** | {roi} | {wr} | {s['closed']} | {s['open']} |")
+    L.append("")
+
+    led = ledgers["control"]
     fills = led.fills
     closed = [f for f in fills if f.pnl is not None]
     openf = [f for f in fills if f.pnl is None]
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-
-    roi = f"{s['roi']*100:+.1f}%" if s["roi"] is not None else "—"
-    wr = f"{s['win_rate']*100:.0f}%" if s["win_rate"] is not None else "—"
-    realized = f"${s['realized_pnl']:+.2f}"
-    open_stake = sum(f.count * f.price for f in openf)
-
-    L = []
-    L.append("# 📈 Paper-trading dashboard\n")
-    L.append(f"_Updated {now} · bankroll ${BANKROLL:.0f} · stations "
-             f"{' · '.join(stations.ACTIVE)} · no live orders placed_\n")
-
-    L.append("| Realized P&L | ROI (on stake) | Win rate | Closed | Open | Open stake |")
-    L.append("|---:|---:|---:|---:|---:|---:|")
-    L.append(f"| **{realized}** | **{roi}** | **{wr}** | {s['closed']} | {s['open']} | "
-             f"${open_stake:.0f} |")
-    L.append("")
-
     if not fills:
-        L.append("> No positions yet. The first in-window tick (10am–4pm ET) will record here.\n")
+        L.append("> No positions yet. The first in-slot tick (15Z / 17Z / 19Z) will record here.\n")
         return "\n".join(L)
 
-    # per-station
+    L.append("## Control arm\n")
     L.append("### By station\n")
     L.append("| Station | Positions | Open | Closed | Realized P&L |")
     L.append("|:--|--:|--:|--:|--:|")
@@ -59,7 +62,6 @@ def build(led: paper.Ledger) -> str:
                  f"{sum(1 for f in fs if f.pnl is not None)} | ${cp:+.2f} |")
     L.append("")
 
-    # equity curve (cumulative realized P&L by settle day)
     if len(closed) >= 2:
         by_day = {}
         for f in sorted(closed, key=lambda f: f.target):
@@ -68,40 +70,30 @@ def build(led: paper.Ledger) -> str:
         for d in sorted(by_day):
             cum += by_day[d]
             xs.append(f'"{d[5:]}"'); ys.append(f"{cum:.2f}")
-        L.append("### Cumulative realized P&L\n")
-        L.append("```mermaid")
-        L.append("xychart-beta")
-        L.append(f'  x-axis [{", ".join(xs)}]')
-        L.append(f'  y-axis "USD"')
-        L.append(f'  line [{", ".join(ys)}]')
-        L.append("```\n")
+        L += ["### Cumulative realized P&L\n", "```mermaid", "xychart-beta",
+              f'  x-axis [{", ".join(xs)}]', '  y-axis "USD"', f'  line [{", ".join(ys)}]', "```\n"]
 
-    # open positions
     if openf:
         L.append("### Open positions\n")
-        L.append("| Station | Settles | Bucket | Side | Price | Qty | Type |")
-        L.append("|:--|:--|:--|:--|--:|--:|:--|")
+        L.append("| Station | Settles | Bucket | Side | Price | Qty |")
+        L.append("|:--|:--|:--|:--|--:|--:|")
         for f in sorted(openf, key=lambda f: (f.target, f.icao))[-20:]:
-            L.append(f"| {f.icao} | {f.target} | {bucket(f)} | {f.side.upper()} | "
-                     f"${f.price:.2f} | {f.count} | {'maker' if f.maker else 'taker'} |")
+            L.append(f"| {f.icao} | {f.target} | {bucket(f)} | {f.side.upper()} | ${f.price:.2f} | {f.count} |")
         L.append("")
 
-    # settled
     if closed:
         L.append("### Recently settled\n")
         L.append("| Station | Day | Bucket | Side | Settled high | P&L |")
         L.append("|:--|:--|:--|:--|--:|--:|")
         for f in sorted(closed, key=lambda f: f.target)[-20:]:
             hi = f"{int(f.realized)}°" if f.realized is not None else "—"
-            L.append(f"| {f.icao} | {f.target} | {bucket(f)} | {f.side.upper()} | {hi} | "
-                     f"${f.pnl:+.2f} |")
+            L.append(f"| {f.icao} | {f.target} | {bucket(f)} | {f.side.upper()} | {hi} | ${f.pnl:+.2f} |")
         L.append("")
-
     return "\n".join(L)
 
 
 def main():
-    md = build(paper.Ledger())
+    md = build({name: paper.Ledger(paper.arm_ledger(name)) for name in strategies.ARMS})
     with open("DASHBOARD.md", "w") as fh:
         fh.write(md)
     summary = os.environ.get("GITHUB_STEP_SUMMARY")

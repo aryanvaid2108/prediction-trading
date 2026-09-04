@@ -99,6 +99,35 @@ def candlesticks(series: str, ticker: str, start_ts: int, end_ts: int,
     return []
 
 
+def parse_orderbook(j: dict) -> dict:
+    """{'yes': [(price, qty)...], 'no': [...]} — resting BIDS per side, best first
+    (V2 `orderbook_fp`, dollars). A YES buy fills against the NO bids (ask =
+    1 - best NO bid) and a NO buy against the YES bids."""
+    ob = j.get("orderbook_fp") or {}
+    out = {}
+    for side, key in (("yes", "yes_dollars"), ("no", "no_dollars")):
+        levels = [(float(p), float(q)) for p, q in (ob.get(key) or [])]
+        out[side] = sorted(levels, key=lambda x: -x[0])
+    return out
+
+
+def orderbook(ticker: str, session=None, timeout: int = 30, retries: int = 4) -> dict:
+    """Live resting book for one market (public, no auth). The market summary
+    lags the book — Sep 3 a 16.5c mid filled at 10.5c and two orders found no
+    ask at all — so every order is re-priced against this right before sending."""
+    s = session or _session()
+    last = None
+    for attempt in range(retries):
+        try:
+            r = s.get(f"{BASE}/markets/{ticker}/orderbook", timeout=timeout)
+            r.raise_for_status()
+            return parse_orderbook(r.json())
+        except requests.RequestException as e:
+            last = e
+            time.sleep(1.0 * (attempt + 1))
+    raise last
+
+
 def _signed_headers(method: str, path: str) -> dict:
     """RSA-PSS auth headers for a signed request. path is the full request path
     (no query), e.g. /trade-api/v2/portfolio/balance. Signs timestamp+method+path."""

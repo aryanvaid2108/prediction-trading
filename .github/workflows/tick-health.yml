@@ -1,47 +1,48 @@
 name: tick-health
 
-# GitHub cron silently skips/delays scheduled runs. This watchdog fires ~35min
-# after each expected live-loop tick; if no run started since the tick was due,
-# it re-dispatches live-loop and pings the phone. Self-healing scheduling
-# without leaving GitHub.
+# Alert-only watchdog. After each tick slot closes, verify that a live-loop run
+# STARTED inside the slot; if none did, ping the phone. It no longer re-dispatches:
+# a run dispatched after the slot would be gated out anyway (a late tick is the
+# failure, not the cure). This workflow is itself subject to GitHub's cron delay,
+# but it checks the slot's time range, not "since now", so a late check is still
+# a correct check. The durable fix is an external dispatcher (docs/CLOUD_LOOP.md).
 on:
   schedule:
-    - cron: "5 15 * * *"    # checks the 14:30Z morning tick
-    - cron: "45 17 * * *"   # checks the 17:10Z midday tick
-    - cron: "15 19 * * *"   # checks the 18:40Z afternoon tick
+    - cron: "20 16 * * *"    # after the 15Z slot (15:00-16:15)
+    - cron: "20 18 * * *"    # after the 17Z slot
+    - cron: "20 20 * * *"    # after the 19Z slot
   workflow_dispatch: {}
 
 permissions:
-  actions: write            # to re-dispatch live-loop
+  actions: read
 
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify the expected tick ran; redispatch if missed
+      - name: Did a live-loop run start inside each closed slot today?
         env:
           GH_TOKEN: ${{ github.token }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
-          # pick the most recent tick that is already due (robust to GitHub
-          # delaying this check into a different hour — a wrong mapping once
-          # caused a spurious dispatch)
-          NOW=$(date -u +%H%M)
-          if   [ "$NOW" -ge 1905 ]; then DUE="18:40"
-          elif [ "$NOW" -ge 1735 ]; then DUE="17:10"
-          else DUE="14:30"
-          fi
-          SINCE=$(date -u +"%Y-%m-%dT${DUE}:00Z" -d "-2 minutes" 2>/dev/null || date -u +"%Y-%m-%dT${DUE}:00Z")
-          N=$(gh run list -R "$GITHUB_REPOSITORY" --workflow live-loop.yml \
-                --created ">$SINCE" --json databaseId -q 'length')
-          echo "runs since $SINCE: $N"
-          if [ "$N" -gt 0 ]; then
-            echo "tick ran — healthy"; exit 0
-          fi
-          echo "tick MISSED — redispatching live-loop"
-          gh workflow run live-loop.yml -R "$GITHUB_REPOSITORY"
-          if [ -n "$NTFY_TOPIC" ]; then
+          NOW=$((10#$(date -u +%H) * 60 + 10#$(date -u +%M)))
+          DAY=$(date -u +%F)
+          MISSED=""
+          for S in 15 17 19; do
+            [ "$NOW" -lt $((S * 60 + 75)) ] && continue      # slot not closed yet
+            FROM="${DAY}T$(printf %02d $S):00:00Z"
+            TO="${DAY}T$(printf %02d $S):59:59Z"
+            [ $S -eq 15 ] && TO="${DAY}T16:15:00Z"           # slots are 75 min
+            [ $S -eq 17 ] && TO="${DAY}T18:15:00Z"
+            [ $S -eq 19 ] && TO="${DAY}T20:15:00Z"
+            N=$(gh run list -R "$GITHUB_REPOSITORY" --workflow live-loop.yml \
+                  --created "${FROM}..${TO}" --json databaseId -q 'length')
+            echo "slot ${S}Z: $N run(s) started in ${FROM}..${TO}"
+            [ "$N" -eq 0 ] && MISSED="$MISSED ${S}Z"
+          done
+          if [ -n "$MISSED" ] && [ -n "$NTFY_TOPIC" ]; then
             curl -s -H "Title: tick-health" -H "Tags: warning" \
-              -d "⏰ live-loop ${DUE}Z tick was skipped by GitHub cron — auto-redispatched." \
+              -d "⏰ no live-loop run started inside slot(s)$MISSED today — GitHub cron delay; see docs/CLOUD_LOOP.md for the external dispatcher." \
               "https://ntfy.sh/$NTFY_TOPIC" > /dev/null
           fi
+          [ -z "$MISSED" ] && echo "all closed slots had a run"

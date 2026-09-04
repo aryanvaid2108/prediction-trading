@@ -67,10 +67,45 @@ window instead of cron:
 python -m scripts.run_daily watch 30 KNYC KMDW KAUS   # tick every 30 min, 10:00–16:00 ET
 ```
 
+## Tick slots and the GitHub cron delay
+
+Placement is allowed only inside a tick slot: **15Z, 17Z, 19Z, 75 min each**
+(11:00 / 13:00 / 15:00 ET). GitHub's cron fired every scheduled run 2.5–3.3 h
+late during Aug 28 – Sep 4, so the workflows now over-fire (`*/15 11-20 * * *`)
+and a shell pre-check skips any run that lands between slots before it installs
+anything. `tick-health` pings the phone when a closed slot had no run at all.
+
+### External dispatcher (only you can set this up)
+
+A `workflow_dispatch` starts within a minute; it does not sit in the cron queue.
+Any external scheduler (cron-job.org, a Pi, launchd on an always-on Mac) can
+fire the tick at 15:00Z / 17:00Z / 19:00Z with one request:
+
+```bash
+curl -s -X POST \
+  -H "Authorization: Bearer $GH_PAT" \
+  -H "Accept: application/vnd.github+json" \
+  https://api.github.com/repos/aryanvaid2108/prediction-trading/actions/workflows/live-loop.yml/dispatches \
+  -d '{"ref":"main"}'
+```
+
+`GH_PAT` is a fine-grained token scoped to this repo with **Actions: read and
+write** only. Repeat for `paper-loop.yml`. Once that runs, the cron entries are
+just a fallback.
+
+## Paper strategy arms
+
+`scripts.run_daily` runs every arm in `wx/strategies.py` each tick from one
+shared quote per station. `control` is the live configuration; every other arm
+changes exactly one parameter, so its ledger (`.cache/paper_<arm>.json`) is a
+daily A/B of that change. Fills are the live book's touch price, capped at the
+contracts resting within the 1¢ cross. Add an arm by adding one line to `ARMS`.
+
 ## Reviewing results
 
 ```bash
-python -m scripts.paper_trade status     # positions / win-rate / realized P&L / ROI
+python -m scripts.dashboard              # DASHBOARD.md: every arm vs control
+python -m scripts.calibration_report     # model vs market Brier + per-station bias
 ```
 
 Let the loop run for several weeks. The number that matters is **realized ROI net

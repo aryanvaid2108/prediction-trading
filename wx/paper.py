@@ -10,7 +10,12 @@ from pathlib import Path
 from . import cli, trading
 from .stations import get
 
-LEDGER = Path(__file__).resolve().parent.parent / ".cache" / "paper_ledger.json"
+LEDGER_DIR = Path(__file__).resolve().parent.parent / ".cache"
+
+
+def arm_ledger(arm: str) -> Path:
+    """One paper ledger per strategy arm (see wx.strategies.ARMS)."""
+    return LEDGER_DIR / f"paper_{arm}.json"
 
 
 @dataclass
@@ -42,7 +47,7 @@ def settle_pnl(f: Fill, realized_high: float) -> float:
 
 
 class Ledger:
-    def __init__(self, path: Path = LEDGER):
+    def __init__(self, path: Path):
         self.path = Path(path)
         self.fills = []
         if self.path.exists():

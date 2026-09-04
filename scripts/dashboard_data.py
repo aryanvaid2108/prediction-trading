@@ -11,9 +11,9 @@ import json
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from wx import kalshi, obs, paper, settlement, stations
+from wx import kalshi, obs, paper, settlement, stations, strategies
 
-BANKROLL = 1000.0
+BANKROLL = 150.0
 OUT = Path(__file__).resolve().parent.parent / "docs" / "data.json"
 
 
@@ -53,8 +53,7 @@ def current_mark(session, cache, st, target, ticker, side):
     return m["yes_bid"] if side == "yes" else m["no_bid"]
 
 
-PAPER_LEDGER = paper.LEDGER
-LIVE_LEDGER = paper.LEDGER.parent / "live_ledger.json"
+LIVE_LEDGER = paper.LEDGER_DIR / "live_ledger.json"
 
 
 def build_env(led, session, mkt_cache, temp_cache, today):
@@ -128,14 +127,17 @@ def main():
     session = kalshi._session()
     mkt_cache, temp_cache = {}, {}
     today = date.today()
+    arms = {name: paper.Ledger(paper.arm_ledger(name)) for name in strategies.ARMS}
     envs = {
         "live": build_env(paper.Ledger(LIVE_LEDGER), session, mkt_cache, temp_cache, today),
-        "paper": build_env(paper.Ledger(PAPER_LEDGER), session, mkt_cache, temp_cache, today),
+        "paper": build_env(arms["control"], session, mkt_cache, temp_cache, today),
     }
     data = {
         "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
         "bankroll": BANKROLL, "today": today.isoformat(), "active": stations.ACTIVE,
         "envs": envs,
+        # every paper arm vs the control — the daily strategy A/B
+        "arms": {name: led.summary() for name, led in arms.items()},
     }
     OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(json.dumps(data, indent=1))
