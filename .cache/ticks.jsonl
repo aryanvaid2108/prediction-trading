@@ -1,0 +1,7 @@
+{"ts": "2026-09-04T19:01:26+00:00", "slot": 19, "target": "2026-09-04", "icao": "KNYC", "mu": 83.98, "sigma": 0.915, "obs_max": 83.0, "intraday": true, "cands": [], "pick": null}
+{"ts": "2026-09-04T19:01:26+00:00", "slot": 19, "target": "2026-09-04", "icao": "KMDW", "mu": 92.81, "sigma": 1.724, "obs_max": 90.0, "intraday": true, "cands": [], "pick": null}
+{"ts": "2026-09-04T19:01:26+00:00", "slot": 19, "target": "2026-09-04", "icao": "KAUS", "mu": 90.16, "sigma": 2.361, "obs_max": 86.0, "intraday": true, "cands": [], "pick": null}
+{"ts": "2026-09-04T19:01:26+00:00", "slot": 19, "target": "2026-09-04", "icao": "KLAX", "error": "ReadTimeout: HTTPSConnectionPool(host='mesonet.agron.iastate.edu', port=443): Read timed out."}
+{"ts": "2026-09-04T19:01:26+00:00", "slot": 19, "target": "2026-09-04", "icao": "KSFO", "error": "HTTPError: 503 Server Error: Service Unavailable for url: https://mesonet.agron.iastate.edu"}
+{"ts": "2026-09-04T19:01:26+00:00", "slot": 19, "target": "2026-09-04", "icao": "KDEN", "mu": 92.6, "sigma": 1.034, "obs_max": 88.0, "intraday": true, "cands": [], "pick": null}
+{"ts": "2026-09-04T19:01:26+00:00", "slot": 19, "target": "2026-09-04", "icao": "KPHL", "error": "HTTPError: 503 Server Error: Service Unavailable for url: https://mesonet.agron.iastate.edu"}
