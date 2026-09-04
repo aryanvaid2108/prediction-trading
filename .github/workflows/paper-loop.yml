@@ -38,6 +38,7 @@ jobs:
           if [ -n "${{ inputs.force }}" ]; then SLOT="manual"; fi
           echo "now $(date -u +%H:%M)Z -> slot='${SLOT}'"
           echo "slot=$SLOT" >> "$GITHUB_OUTPUT"
+          echo "day=$(date -u +%F)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@v4
         if: steps.slot.outputs.slot != ''
@@ -49,6 +50,11 @@ jobs:
       - name: Install dependencies
         if: steps.slot.outputs.slot != ''
         run: pip install -r requirements.txt
+      - uses: actions/cache@v4            # 75-day history, refetched only by the day's first run
+        if: steps.slot.outputs.slot != ''
+        with:
+          path: .cache/hist
+          key: hist-${{ steps.slot.outputs.day }}
 
       - name: Fresh ledger (another run may have pushed since checkout)
         if: steps.slot.outputs.slot != ''

@@ -18,3 +18,4 @@ docs/data.json
 *.pem
 kalshi_*.key
 .cache/bt_quotes/
+.cache/hist/

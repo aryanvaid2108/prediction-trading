@@ -11,7 +11,7 @@ import dataclasses
 import pandas as pd
 from scipy.stats import norm
 
-from . import cli, emos, intraday, obs, trading
+from . import cli, emos, histcache, intraday, obs, trading
 from .backtest import (build_archive_table_wide, calibration_factor,
                        rolling_score_mixed)
 from .forecast import (ensemble_features, fetch_members_archive,
@@ -27,8 +27,9 @@ def quote(st: Station, target: date, train_days: int = 75, window: int = 45,
     Trains on the trailing multi-model archive up to the day before target, then
     applies the fit to the live multi-model forecast for target.
     """
-    table, cols = build_archive_table_wide(st, target - timedelta(days=train_days),
-                                           target - timedelta(days=1))
+    t0, t1 = target - timedelta(days=train_days), target - timedelta(days=1)
+    table, cols = histcache.get(f"archive_{st.icao}_{t0}_{t1}", t1,
+                                lambda: build_archive_table_wide(st, t0, t1))
     tr = table.tail(window)
     model = emos.fit_mixed(tr[cols].to_numpy(),
                            (tr["ens_std"].to_numpy() ** 2).reshape(-1, 1),
@@ -73,8 +74,9 @@ def quote_live(st: Station, target: date = None, now_utc: datetime = None,
     now_utc = now_utc or datetime.now(timezone.utc)
 
     # --- forecast prior (Mixed EMOS) + data-driven sigma calibration ---
-    table, cols = build_archive_table_wide(st, target - timedelta(days=train_days),
-                                           target - timedelta(days=1))
+    t0, t1 = target - timedelta(days=train_days), target - timedelta(days=1)
+    table, cols = histcache.get(f"archive_{st.icao}_{t0}_{t1}", t1,
+                                lambda: build_archive_table_wide(st, t0, t1))
     tr = table.tail(window)
     model = emos.fit_mixed(tr[cols].to_numpy(), (tr["ens_std"].to_numpy() ** 2).reshape(-1, 1),
                            tr["high"].to_numpy(), ridge=ridge)
@@ -130,7 +132,8 @@ def quote_live(st: Station, target: date = None, now_utc: datetime = None,
     prep["day"] = pd.to_datetime(prep["day"])
     rm = prep.set_index("day")[f"rm_{hour_lst}"]
     try:
-        finals = cli.settlement_high(st.icao, target - timedelta(days=train_days), target - timedelta(days=1))
+        finals = histcache.get(f"cli_{st.icao}_{t0}_{t1}", t1,
+                               lambda: cli.settlement_high(st.icao, t0, t1))
     except Exception:
         finals = prep.set_index("day")["final"]   # ASOS reconstruction fallback
     res_all = (finals - rm).dropna()

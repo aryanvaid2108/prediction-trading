@@ -12,7 +12,7 @@ not for picking the best in-sample number.
 
 Usage: python -m scripts.pressure_test            (writes .cache/pressure_test.csv)
 """
-from datetime import date
+from datetime import date, timedelta
 
 import numpy as np
 import pandas as pd
@@ -21,7 +21,7 @@ from wx import stations, strategies
 from scripts import honest_backtest as hb
 
 DESIGN = (date(2026, 7, 1), date(2026, 8, 24))
-HOLDOUT = (date(2026, 8, 25), date(2026, 9, 3))
+HOLDOUT = (date(2026, 8, 25), date.today() - timedelta(days=1))   # grows every week
 C = strategies.CONTROL
 A = strategies.Arm
 

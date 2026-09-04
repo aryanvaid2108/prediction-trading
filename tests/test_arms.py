@@ -104,3 +104,16 @@ def test_early_arm_sits_out_the_afternoon_slot(tmp_path, monkeypatch):
     assert "early" not in out and "control" in out
     out = run_daily.record(ledgers, "KAUS", date(2026, 8, 30), Q, MS, {}, None, slot=15)
     assert "early" in out
+
+
+def test_histcache_only_caches_finished_history(tmp_path, monkeypatch):
+    from datetime import timedelta
+    from wx import histcache
+    monkeypatch.setattr(histcache, "DIR", tmp_path)
+    calls = []
+    build = lambda: calls.append(1) or {"rows": 75}
+    yday = date.today() - timedelta(days=1)
+    assert histcache.get("k", yday, build) == {"rows": 75}
+    assert histcache.get("k", yday, build) == {"rows": 75} and len(calls) == 1   # served from disk
+    histcache.get("today", date.today(), build)
+    assert len(calls) == 2 and not (tmp_path / "today.pkl").exists()          # never cached

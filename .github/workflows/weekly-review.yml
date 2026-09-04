@@ -1,0 +1,41 @@
+name: weekly-review
+
+# Monday: arms vs control, live week, calibration, per-station bias, and the
+# pressure test re-run with the holdout extended to yesterday. This is the
+# gate for promoting a paper arm to live and for bankroll steps.
+on:
+  schedule:
+    - cron: "0 12 * * 1"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write            # commit the refreshed pressure_test.csv
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Review
+        env:
+          PAT_EXPIRES: "2026-10-04"
+        run: python -m scripts.weekly_review
+      - name: Commit refreshed pressure test
+        run: |
+          git config user.name "kalshi-weather-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .cache/pressure_test.csv
+          git diff --cached --quiet || (git commit -m "weekly review $(date -u +%F)" && git pull --rebase origin main && git push)
+      - name: Notify phone (ntfy)
+        if: always()
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          [ -z "$NTFY_TOPIC" ] && exit 0
+          MSG="$(cat .cache/weekly_review.txt 2>/dev/null || echo 'weekly review ${{ job.status }} — see Actions log')"
+          curl -s -H "Title: weekly review" -H "Tags: bar_chart" -d "$MSG" "https://ntfy.sh/$NTFY_TOPIC" > /dev/null
