@@ -37,6 +37,7 @@ ARM = strategies.Arm(
     min_price=float(os.environ.get("LIVE_MIN_PRICE", "0.15")),
     ratio_cap=float(os.environ.get("LIVE_RATIO_CAP", "2.5")),
     model_weight=float(os.environ.get("LIVE_MODEL_WEIGHT", "0.5")),
+    robust_delta=float(os.environ.get("LIVE_ROBUST_DELTA", str(strategies.CONTROL.robust_delta))),
 )
 DAILY_LOSS_CAP = float(os.environ.get("LIVE_DAILY_LOSS_CAP", "15"))  # 10% of canary bankroll
 BALANCE_FLOOR = float(os.environ.get("LIVE_BALANCE_FLOOR", "0"))     # dollars; 0 = check off

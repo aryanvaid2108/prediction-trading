@@ -82,6 +82,8 @@ jobs:
           # $150 and total daily stake is capped at $150. Delete this line to
           # restore the full $750 bankroll.
           LIVE_BANKROLL: "150"
+          # robust gate ±1.0° (was 1.5): pressure test + real-volume liquidity check, Sep 4
+          LIVE_ROBUST_DELTA: "1.0"
           LIVE_RESUME: ${{ inputs.resume }}
           LIVE_FORCE: ${{ inputs.force }}
         run: python -m scripts.run_live

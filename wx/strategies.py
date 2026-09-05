@@ -32,7 +32,7 @@ class Arm:
     min_price: float = 0.15       # no sub-15c longshots (Aug 25-26: all lost)
     ratio_cap: float = 2.5        # max p/ask disagreement we trust
     model_weight: float = 0.5     # shrink toward the book until Brier earns it up
-    robust_delta: float = 1.5     # edge must survive a ±delta° mean miss; 0 = gate off
+    robust_delta: float = 1.0     # edge must survive a ±delta° mean miss; 0 = gate off (was 1.5 until Sep 4)
     toward_market: bool = True    # also shift the mean toward the book's implied mean
     ticks: tuple = SLOTS_UTC      # slots this arm may enter at
 
@@ -45,13 +45,15 @@ class Arm:
 CONTROL = Arm("control")                                  # == the live configuration
 # Each arm changes ONE thing. The Sep 4 pressure test (scripts.pressure_test,
 # Jul 1-Aug 24 design + Aug 25-Sep 3 holdout) picked them: the robust gate was
-# the costliest rule in the backtest (no gate +$4,291 vs control +$758, positive
-# in both months and in the holdout), ±1.0° kept most of that, w=0.25 had the
-# smallest drawdown, and the morning slot was the only one positive out of sample.
+# the costliest rule in the backtest (no gate +$4,291 vs ±1.5° +$758, positive
+# in both months and in the holdout), ±1.0° kept most of that under real hourly
+# volume caps and live fill ratios (scripts.liquidity_check) and went LIVE on
+# Sep 4 evening; ±1.5° stays as the counterfactual. w=0.25 had the smallest
+# drawdown, and the morning slot was the only one positive out of sample.
 ARMS = {
     "control": CONTROL,
     "no_gate": Arm("no_gate", robust_delta=0.0),
-    "gate_1": Arm("gate_1", robust_delta=1.0),
+    "gate_15": Arm("gate_15", robust_delta=1.5),
     "model_w1": Arm("model_w1", model_weight=1.0),
     "model_w025": Arm("model_w025", model_weight=0.25),
     "early": Arm("early", ticks=(15, 17)),
