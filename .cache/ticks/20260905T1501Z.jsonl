@@ -1,0 +1,7 @@
+{"ts": "2026-09-05T15:01:25+00:00", "slot": 15, "target": "2026-09-05", "icao": "KNYC", "mu": 79.35, "sigma": 1.169, "obs_max": 76.0, "intraday": true, "cands": [], "pick": null}
+{"ts": "2026-09-05T15:01:25+00:00", "slot": 15, "target": "2026-09-05", "icao": "KMDW", "mu": 82.19, "sigma": 1.908, "obs_max": 82.0, "intraday": true, "cands": [{"ticker": "KXHIGHCHI-26SEP05-B83.5", "side": "no", "ask": 0.49, "p_model": 0.9585, "p_market": 0.475, "ev": 6.2, "worst_edge": 0.223, "gated": true}, {"ticker": "KXHIGHCHI-26SEP05-T83", "side": "yes", "ask": 0.39, "p_model": 0.8655, "p_market": 0.365, "ev": 7.18, "worst_edge": 0.2375, "gated": true}], "pick": "KXHIGHCHI-26SEP05-T83"}
+{"ts": "2026-09-05T15:01:25+00:00", "slot": 15, "target": "2026-09-05", "icao": "KAUS", "mu": 97.83, "sigma": 1.636, "obs_max": 84.0, "intraday": true, "cands": [], "pick": null}
+{"ts": "2026-09-05T15:01:25+00:00", "slot": 15, "target": "2026-09-05", "icao": "KLAX", "mu": 79.94, "sigma": 2.253, "obs_max": 69.0, "intraday": true, "cands": [], "pick": null}
+{"ts": "2026-09-05T15:01:25+00:00", "slot": 15, "target": "2026-09-05", "icao": "KSFO", "mu": 71.15, "sigma": 2.253, "obs_max": 61.0, "intraday": true, "cands": [], "pick": null}
+{"ts": "2026-09-05T15:01:25+00:00", "slot": 15, "target": "2026-09-05", "icao": "KDEN", "mu": 93.27, "sigma": 1.266, "obs_max": 76.0, "intraday": true, "cands": [], "pick": null}
+{"ts": "2026-09-05T15:01:25+00:00", "slot": 15, "target": "2026-09-05", "icao": "KPHL", "mu": 83.5, "sigma": 1.354, "obs_max": 78.0, "intraday": true, "cands": [], "pick": null}

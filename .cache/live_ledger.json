@@ -350,5 +350,21 @@
     "fee": 0.4225,
     "p_model": 0.6655,
     "p_market": 0.165
+  },
+  {
+    "ticker": "KXHIGHCHI-26SEP05-T83",
+    "icao": "KMDW",
+    "target": "2026-09-05",
+    "side": "yes",
+    "lo": null,
+    "hi": 82,
+    "price": 0.3893,
+    "count": 29,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": 0.4814,
+    "p_model": 0.8655,
+    "p_market": 0.37
   }
 ]
