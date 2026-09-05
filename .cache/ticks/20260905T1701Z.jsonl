@@ -1,0 +1,6 @@
+{"ts": "2026-09-05T17:01:19+00:00", "slot": 17, "target": "2026-09-05", "icao": "KNYC", "mu": 78.36, "sigma": 1.04, "obs_max": 76.0, "intraday": true, "cands": [], "pick": null}
+{"ts": "2026-09-05T17:01:19+00:00", "slot": 17, "target": "2026-09-05", "icao": "KAUS", "mu": 98.35, "sigma": 1.125, "obs_max": 93.0, "intraday": true, "cands": [], "pick": null}
+{"ts": "2026-09-05T17:01:19+00:00", "slot": 17, "target": "2026-09-05", "icao": "KLAX", "mu": 80.66, "sigma": 1.814, "obs_max": 75.0, "intraday": true, "cands": [], "pick": null}
+{"ts": "2026-09-05T17:01:19+00:00", "slot": 17, "target": "2026-09-05", "icao": "KSFO", "mu": 70.99, "sigma": 2.487, "obs_max": 64.0, "intraday": true, "cands": [], "pick": null}
+{"ts": "2026-09-05T17:01:19+00:00", "slot": 17, "target": "2026-09-05", "icao": "KDEN", "mu": 92.9, "sigma": 1.247, "obs_max": 85.0, "intraday": true, "cands": [], "pick": null}
+{"ts": "2026-09-05T17:01:19+00:00", "slot": 17, "target": "2026-09-05", "icao": "KPHL", "mu": 83.54, "sigma": 1.113, "obs_max": 81.0, "intraday": true, "cands": [], "pick": null}
