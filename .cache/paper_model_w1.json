@@ -13,7 +13,8 @@
     "pnl": -15.55,
     "fee": null,
     "p_model": 0.7725,
-    "p_market": 0.32000000000000006
+    "p_market": 0.32000000000000006,
+    "wanted": null
   },
   {
     "ticker": "KXHIGHCHI-26SEP05-B83.5",
@@ -29,7 +30,8 @@
     "pnl": null,
     "fee": null,
     "p_model": 0.955,
-    "p_market": 0.475
+    "p_market": 0.475,
+    "wanted": null
   },
   {
     "ticker": "KXHIGHTSFO-26SEP05-B71.5",
@@ -45,6 +47,58 @@
     "pnl": null,
     "fee": null,
     "p_model": 0.6495,
-    "p_market": 0.395
+    "p_market": 0.395,
+    "wanted": null
+  },
+  {
+    "ticker": "KXHIGHAUS-26SEP05-B100.5",
+    "icao": "KAUS",
+    "target": "2026-09-05",
+    "side": "no",
+    "lo": 100.0,
+    "hi": 101.0,
+    "price": 0.65,
+    "count": 6,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.9775,
+    "p_market": 0.63,
+    "wanted": 23
+  },
+  {
+    "ticker": "KXHIGHTLV-26SEP05-B97.5",
+    "icao": "KLAS",
+    "target": "2026-09-05",
+    "side": "no",
+    "lo": 97.0,
+    "hi": 98.0,
+    "price": 0.35,
+    "count": 23,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.49250000000000005,
+    "p_market": 0.345,
+    "wanted": 23
+  },
+  {
+    "ticker": "KXHIGHTNOLA-26SEP05-B90.5",
+    "icao": "KMSY",
+    "target": "2026-09-05",
+    "side": "no",
+    "lo": 90.0,
+    "hi": 91.0,
+    "price": 0.44,
+    "count": 2,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.984,
+    "p_market": 0.43500000000000005,
+    "wanted": 34
   }
 ]

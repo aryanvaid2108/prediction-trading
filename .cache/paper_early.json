@@ -13,6 +13,7 @@
     "pnl": null,
     "fee": null,
     "p_model": 0.865,
-    "p_market": 0.315
+    "p_market": 0.315,
+    "wanted": null
   }
 ]

@@ -13,6 +13,24 @@
     "pnl": null,
     "fee": null,
     "p_model": 0.865,
-    "p_market": 0.315
+    "p_market": 0.315,
+    "wanted": null
+  },
+  {
+    "ticker": "KXHIGHTNOLA-26SEP05-B90.5",
+    "icao": "KMSY",
+    "target": "2026-09-05",
+    "side": "no",
+    "lo": 90.0,
+    "hi": 91.0,
+    "price": 0.44,
+    "count": 2,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.984,
+    "p_market": 0.43500000000000005,
+    "wanted": 34
   }
 ]
