@@ -35,6 +35,7 @@ class Arm:
     robust_delta: float = 1.0     # edge must survive a ±delta° mean miss; 0 = gate off (was 1.5 until Sep 4)
     toward_market: bool = True    # also shift the mean toward the book's implied mean
     ticks: tuple = SLOTS_UTC      # slots this arm may enter at
+    about: str = ""               # one plain-English line for the dashboard
 
     def decide_kw(self) -> dict:
         return dict(min_edge=self.min_edge, kelly_frac=self.kelly_frac,
@@ -51,13 +52,61 @@ CONTROL = Arm("control")                                  # == the live configur
 # Sep 4 evening; ±1.5° stays as the counterfactual. w=0.25 had the smallest
 # drawdown, and the morning slot was the only one positive out of sample.
 ARMS = {
-    "control": CONTROL,
-    "no_gate": Arm("no_gate", robust_delta=0.0),
-    "gate_15": Arm("gate_15", robust_delta=1.5),
-    "model_w1": Arm("model_w1", model_weight=1.0),
-    "model_w025": Arm("model_w025", model_weight=0.25),
-    "early": Arm("early", ticks=(15, 17)),
+    "control": Arm("control", about="Exactly the live rules. Every other arm is judged against this one."),
+    "no_gate": Arm("no_gate", robust_delta=0.0,
+                   about="No forecast-error check at all. Backtest's best result; takes ~3 trades a day."),
+    "gate_15": Arm("gate_15", robust_delta=1.5,
+                   about="The stricter 1.5°F check that was live until Sep 4."),
+    "model_w1": Arm("model_w1", model_weight=1.0,
+                    about="Trusts the model fully, no blending with the market price."),
+    "model_w025": Arm("model_w025", model_weight=0.25,
+                      about="Leans 75% on the market price. Fewest trades, smallest drawdown in backtest."),
+    "early": Arm("early", ticks=(15, 17),
+                 about="Enters only at the 11:00 and 13:00 ET ticks, never the afternoon."),
 }
+
+# What changed in the LIVE rules and why — newest first. Shown on the dashboard.
+CHANGES = [
+    ("2026-09-04", "Forecast-error check loosened from 1.5°F to 1.0°F: it was blocking most of the "
+                   "backtest's profit, and the looser check held up under real hourly volume caps."),
+    ("2026-09-04", "Trades only inside three tick slots (11:00, 13:00, 15:00 ET); orders re-priced on "
+                   "the live order book and capped at resting depth before sending."),
+    ("2026-08-27", "15¢ price floor, 2.5x disagreement cap, 50/50 blend with the market price, "
+                   "$15 daily loss kill-switch — after the Aug 25-26 losses."),
+    ("2026-08-25", "Live with real money at a $150 canary bankroll."),
+]
+
+ET = {15: "11:00", 17: "13:00", 19: "15:00"}
+
+
+def describe(arm: Arm, bankroll: float, loss_cap: float, station_frac: float = 0.25,
+             slots=SLOTS_UTC, stations=()) -> list:
+    """The rules in plain English, generated from the values that actually run."""
+    L = []
+    if stations:
+        L.append(f"Trades Kalshi daily high-temperature markets for {len(stations)} cities: "
+                 + ", ".join(stations) + ".")
+    L.append("Looks for trades at " + ", ".join(ET.get(h, f"{h:02d}Z") for h in slots)
+             + f" ET, and may place them for {SLOT_MINUTES} minutes after each.")
+    L.append(f"Bankroll ${bankroll:,.0f}. A day that loses more than ${loss_cap:,.0f} halts trading "
+             f"until you resume it by hand.")
+    L.append(f"At most one position per city per day, and no more than {station_frac:.0%} of bankroll "
+             f"(${bankroll * station_frac:,.2f}) on any city.")
+    L.append(f"The model's probability is blended {arm.model_weight:.0%} model / {1 - arm.model_weight:.0%} "
+             f"market price before deciding.")
+    L.append(f"Buys only when that blended probability beats the ask by at least {arm.min_edge * 100:.0f} points "
+             f"or {35}% of the ask, whichever is larger, after fees.")
+    L.append(f"Never buys below {arm.min_price * 100:.0f}¢"
+             + (f", and never when the model says the market is wrong by more than {arm.ratio_cap:g}×." if arm.ratio_cap else "."))
+    if arm.robust_delta:
+        L.append(f"Rejects a trade that would stop being profitable if the forecast were off by "
+                 f"{arm.robust_delta:g}°F" + (" in either direction or toward the market's own view." if arm.toward_market else "."))
+    else:
+        L.append("No forecast-error check.")
+    L.append(f"Sizes at {arm.kelly_frac:g}× Kelly. Orders are immediate-or-cancel at the live order book's "
+             f"ask, capped at what is actually resting there.")
+    return L
+
 
 
 @dataclass

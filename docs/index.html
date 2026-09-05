@@ -386,16 +386,20 @@ function draw(){
     +(live?`<b style="color:var(--neg)">LIVE</b> — real orders`:`<b>PAPER</b> — strategy testing, no live orders`);
   document.getElementById("updated").textContent="updated "+ago(d.updated);
   const note=document.getElementById("envnote");
-  if(live && !d.positions.length)
-    note.innerHTML='<div class="envnote">No <b>live</b> trades yet — the bot is running in <b>paper</b>. Promote a strategy to prod to populate this view.</div>';
-  else if(!live){
+  const S=RAW.strategy||{rules:[],changes:[],arms:{}};
+  if(live){
+    const rules=S.rules.map(r=>`<li>${r}</li>`).join("");
+    const chg=S.changes.map(c=>`<li><span style="font-family:ui-monospace,monospace;color:var(--muted)">${c.date}</span> — ${c.what}</li>`).join("");
+    note.innerHTML=`<div class="envnote"><b>What the live bot is doing right now</b> — generated from the settings it runs with, not typed by hand.
+      <ul style="margin:8px 0 0 18px;padding:0;line-height:1.5">${rules}</ul>
+      <details style="margin-top:10px"><summary style="cursor:pointer"><b>Changes to the live rules</b> (${S.changes.length})</summary><ul style="margin:6px 0 0 18px;padding:0;line-height:1.5">${chg}</ul></details></div>`;
+  } else {
     const arms=RAW.arms||{};
     const rows=Object.keys(arms).map(k=>{const a=arms[k];
-      return `<tr><td><b>${k}</b></td><td style="text-align:right">$${(a.realized_pnl||0).toFixed(2)}</td><td style="text-align:right">${a.roi==null?"—":(a.roi*100).toFixed(1)+"%"}</td><td style="text-align:right">${a.win_rate==null?"—":Math.round(a.win_rate*100)+"%"}</td><td style="text-align:right">${a.closed}</td><td style="text-align:right">${a.open}</td></tr>`}).join("");
-    note.innerHTML='<div class="envnote">📎 <b>Paper arms</b> — the control arm mirrors live; every other arm changes one parameter. Fills at the live book, depth-capped. No real money.'
-      +(rows?`<table style="margin-top:8px;font-size:12px;border-collapse:collapse"><tr><th style="text-align:left">arm</th><th>P&amp;L</th><th>ROI</th><th>win</th><th>closed</th><th>open</th></tr>${rows}</table>`:"")+'</div>';
+      return `<tr><td><b>${k}</b><div style="color:var(--muted);font-size:11px;white-space:normal;max-width:34ch">${S.arms[k]||""}</div></td><td style="text-align:right">$${(a.realized_pnl||0).toFixed(2)}</td><td style="text-align:right">${a.roi==null?"—":(a.roi*100).toFixed(1)+"%"}</td><td style="text-align:right">${a.win_rate==null?"—":Math.round(a.win_rate*100)+"%"}</td><td style="text-align:right">${a.closed}</td><td style="text-align:right">${a.open}</td></tr>`}).join("");
+    note.innerHTML='<div class="envnote">📎 <b>Paper arms</b> — each arm is the live strategy with exactly one thing changed, traded on paper against the real order book every tick. An arm goes live only after it beats <b>control</b> over ~60 trades in the Monday review.'
+      +(rows?`<table style="margin-top:8px;font-size:12px;border-collapse:collapse;width:100%"><tr><th style="text-align:left">arm</th><th>P&amp;L</th><th>ROI</th><th>win</th><th>closed</th><th>open</th></tr>${rows}</table>`:"")+'</div>';
   }
-  else note.innerHTML="";
   renderCards(d); renderMap(d); renderTemp(d); renderMarks(d); renderEquity(d); renderTables(d);
 }
 

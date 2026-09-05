@@ -45,7 +45,7 @@ def test_no_gate_arm_never_kills_a_candidate():
 
 def test_arms_differ_from_control_by_one_parameter():
     for name, arm in strategies.ARMS.items():
-        diff = [k for k in vars(arm) if k != "name" and getattr(arm, k) != getattr(strategies.CONTROL, k)]
+        diff = [k for k in vars(arm) if k not in ("name", "about") and getattr(arm, k) != getattr(strategies.CONTROL, k)]
         assert len(diff) == (0 if name == "control" else 1), (name, diff)
 
 
@@ -117,3 +117,11 @@ def test_histcache_only_caches_finished_history(tmp_path, monkeypatch):
     assert histcache.get("k", yday, build) == {"rows": 75} and len(calls) == 1   # served from disk
     histcache.get("today", date.today(), build)
     assert len(calls) == 2 and not (tmp_path / "today.pkl").exists()          # never cached
+
+
+def test_dashboard_rules_come_from_the_live_workflow():
+    from scripts.dashboard_data import live_env, strategy
+    env = live_env()
+    assert env["LIVE_BANKROLL"] == "150" and env["LIVE_ROBUST_DELTA"] == "1.0"
+    rules = " ".join(strategy()["rules"])
+    assert "Bankroll $150" in rules and "off by 1°F" in rules and "below 15¢" in rules

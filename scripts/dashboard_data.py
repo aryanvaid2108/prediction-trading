@@ -8,6 +8,7 @@ still renders. Regenerated every tick by the paper-loop workflow.
 Usage: python -m scripts.dashboard_data
 """
 import json
+import re
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -54,6 +55,33 @@ def current_mark(session, cache, st, target, ticker, side):
 
 
 LIVE_LEDGER = paper.LEDGER_DIR / "live_ledger.json"
+WORKFLOW = Path(__file__).resolve().parent.parent / ".github" / "workflows" / "live-loop.yml"
+
+
+def live_env() -> dict:
+    """LIVE_* values from the live workflow — the settings that actually run."""
+    return {k: v for k, v in re.findall(r'^\s+(LIVE_[A-Z_]+):\s*"([^"]*)"', WORKFLOW.read_text(), re.M)}
+
+
+def strategy() -> dict:
+    """Plain-English live rules generated from the live config, plus the change log."""
+    env = live_env()
+    arm = strategies.Arm("live", **{k: v for k, v in dict(
+        min_edge=float(env.get("LIVE_MIN_EDGE", strategies.CONTROL.min_edge)),
+        min_price=float(env.get("LIVE_MIN_PRICE", strategies.CONTROL.min_price)),
+        ratio_cap=float(env.get("LIVE_RATIO_CAP", strategies.CONTROL.ratio_cap)),
+        model_weight=float(env.get("LIVE_MODEL_WEIGHT", strategies.CONTROL.model_weight)),
+        robust_delta=float(env.get("LIVE_ROBUST_DELTA", strategies.CONTROL.robust_delta)),
+    ).items()})
+    bankroll = float(env.get("LIVE_BANKROLL", 750))
+    loss_cap = float(env.get("LIVE_DAILY_LOSS_CAP", 15))
+    return {
+        "rules": strategies.describe(arm, bankroll, loss_cap,
+                                     stations=[stations.get(ic).name for ic in stations.ACTIVE]),
+        "changes": [{"date": d, "what": w} for d, w in strategies.CHANGES],
+        "arms": {name: a.about for name, a in strategies.ARMS.items()},
+        "bankroll": bankroll, "loss_cap": loss_cap,
+    }
 
 
 def build_env(led, session, mkt_cache, temp_cache, today):
@@ -134,10 +162,12 @@ def main():
     }
     data = {
         "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
-        "bankroll": BANKROLL, "today": today.isoformat(), "active": stations.ACTIVE,
+        "bankroll": strategy()["bankroll"], "today": today.isoformat(), "active": stations.ACTIVE,
         "envs": envs,
         # every paper arm vs the control — the daily strategy A/B
         "arms": {name: led.summary() for name, led in arms.items()},
+        # the live rules in plain English, from the config that actually runs
+        "strategy": strategy(),
     }
     OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(json.dumps(data, indent=1))

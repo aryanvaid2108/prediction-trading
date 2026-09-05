@@ -7,6 +7,7 @@ import os
 from datetime import datetime, timezone
 
 from wx import paper, stations, strategies
+from scripts.dashboard_data import strategy
 
 BANKROLL = 150.0
 
@@ -27,7 +28,13 @@ def _fmt(s):
 
 def build(ledgers: dict) -> str:
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    L = ["# 📈 Paper strategy arms\n",
+    st = strategy()
+    L = ["# 📈 Live strategy and paper arms\n",
+         "## What the live bot is doing right now\n",
+         "_Generated from the settings the live loop runs with._\n"]
+    L += [f"- {r}" for r in st["rules"]]
+    L += ["", "**Changes to the live rules**", ""] + [f"- `{c['date']}` {c['what']}" for c in st["changes"]]
+    L += ["", "## Paper arms\n",
          f"_Updated {now} · bankroll ${BANKROLL:.0f} per arm · stations "
          f"{' · '.join(stations.ACTIVE)} · fills at the live book's touch, depth-capped · "
          f"no live orders placed_\n",
@@ -37,10 +44,10 @@ def build(ledgers: dict) -> str:
     for name, led in ledgers.items():
         arm = strategies.ARMS[name]
         diff = ", ".join(f"{k}={v}" for k, v in vars(arm).items()
-                         if k != "name" and v != getattr(ctrl, k)) or "— (live config)"
+                         if k not in ("name", "about") and v != getattr(ctrl, k)) or "live config"
         s = led.summary()
         realized, roi, wr = _fmt(s)
-        L.append(f"| **{name}** | {diff} | **{realized}** | {roi} | {wr} | {s['closed']} | {s['open']} |")
+        L.append(f"| **{name}** | {diff} — {arm.about} | **{realized}** | {roi} | {wr} | {s['closed']} | {s['open']} |")
     L.append("")
 
     led = ledgers["control"]
