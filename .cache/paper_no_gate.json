@@ -9,8 +9,8 @@
     "price": 0.21,
     "count": 34,
     "maker": false,
-    "realized": null,
-    "pnl": null,
+    "realized": 72.0,
+    "pnl": -7.54,
     "fee": null,
     "p_model": 0.5245,
     "p_market": 0.20500000000000002
@@ -25,10 +25,26 @@
     "price": 0.33,
     "count": 36,
     "maker": false,
-    "realized": null,
-    "pnl": null,
+    "realized": 93.0,
+    "pnl": -12.44,
     "fee": null,
     "p_model": 0.7725,
     "p_market": 0.32000000000000006
+  },
+  {
+    "ticker": "KXHIGHCHI-26SEP05-T83",
+    "icao": "KMDW",
+    "target": "2026-09-05",
+    "side": "yes",
+    "lo": null,
+    "hi": 82,
+    "price": 0.32,
+    "count": 35,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.865,
+    "p_market": 0.315
   }
 ]

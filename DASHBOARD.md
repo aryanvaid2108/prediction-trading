@@ -23,15 +23,27 @@ _Generated from the settings the live loop runs with._
 
 ## Paper arms
 
-_Updated 2026-09-05 07:36 UTC · bankroll $150 per arm · stations KNYC · KMDW · KAUS · KLAX · KSFO · KDEN · KPHL · fills at the live book's touch, depth-capped · no live orders placed_
+_Updated 2026-09-05 15:10 UTC · bankroll $150 per arm · stations KNYC · KMDW · KAUS · KLAX · KSFO · KDEN · KPHL · fills at the live book's touch, depth-capped · no live orders placed_
 
 | Arm | Differs from control | Realized P&L | ROI (on stake) | Win rate | Closed | Open |
 |:--|:--|---:|---:|---:|---:|---:|
-| **control** | live config — Exactly the live rules. Every other arm is judged against this one. | **$+0.00** | — | — | 0 | 0 |
-| **no_gate** | robust_delta=0.0 — No forecast-error check at all. Backtest's best result; takes ~3 trades a day. | **$+0.00** | — | — | 0 | 2 |
-| **gate_15** | robust_delta=1.5 — The stricter 1.5°F check that was live until Sep 4. | **$+0.00** | — | — | 0 | 1 |
-| **model_w1** | model_weight=1.0 — Trusts the model fully, no blending with the market price. | **$+0.00** | — | — | 0 | 1 |
+| **control** | live config — Exactly the live rules. Every other arm is judged against this one. | **$+0.00** | — | — | 0 | 1 |
+| **no_gate** | robust_delta=0.0 — No forecast-error check at all. Backtest's best result; takes ~3 trades a day. | **$-19.98** | -105.0% | 0% | 2 | 1 |
+| **gate_15** | robust_delta=1.5 — The stricter 1.5°F check that was live until Sep 4. | **$-12.44** | -104.7% | 0% | 1 | 0 |
+| **model_w1** | model_weight=1.0 — Trusts the model fully, no blending with the market price. | **$-15.55** | -104.7% | 0% | 1 | 2 |
 | **model_w025** | model_weight=0.25 — Leans 75% on the market price. Fewest trades, smallest drawdown in backtest. | **$+0.00** | — | — | 0 | 0 |
-| **early** | ticks=(15, 17) — Enters only at the 11:00 and 13:00 ET ticks, never the afternoon. | **$+0.00** | — | — | 0 | 0 |
+| **early** | ticks=(15, 17) — Enters only at the 11:00 and 13:00 ET ticks, never the afternoon. | **$+0.00** | — | — | 0 | 1 |
 
-> No positions yet. The first in-slot tick (15Z / 17Z / 19Z) will record here.
+## Control arm
+
+### By station
+
+| Station | Positions | Open | Closed | Realized P&L |
+|:--|--:|--:|--:|--:|
+| KMDW | 1 | 1 | 0 | $+0.00 |
+
+### Open positions
+
+| Station | Settles | Bucket | Side | Price | Qty |
+|:--|:--|:--|:--|--:|--:|
+| KMDW | 2026-09-05 | ≤82° | YES | $0.32 | 35 |
