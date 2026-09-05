@@ -173,8 +173,16 @@ def build_plan(icaos, target, now_utc, led, quotes=None, slot=None):
             print(f"      {d.ticker} {d.side.upper():3} ask={d.price:.2f} p_model={d.model_prob:.2f} "
                   f"p_mkt={d.market_prob if d.market_prob is None else round(d.market_prob, 2)} "
                   f"ev=${d.ev:.2f} gate={'PASS' if c.gated else 'KILL'} ({c.worst_edge:+.3f})")
+        buckets = []
+        for m in ms:
+            if m.get("yes_ask") is None or m.get("yes_bid") is None:
+                continue
+            lo_, hi_ = trading.market_bounds(m["strike_type"], m.get("floor"), m.get("cap"))
+            buckets.append({"ticker": m["ticker"], "lo": lo_, "hi": hi_,
+                            "p_model": round(q.prob_fn(lo_, hi_), 4),
+                            "p_market": round((m["yes_ask"] + m["yes_bid"]) / 2, 4)})
         log_tick({**base, "mu": round(q.mu, 2), "sigma": round(q.sigma, 3),
-                  "obs_max": q.observed_max, "intraday": q.intraday_active,
+                  "obs_max": q.observed_max, "intraday": q.intraday_active, "buckets": buckets,
                   "cands": [{"ticker": c.decision.ticker, "side": c.decision.side,
                              "ask": c.decision.price, "p_model": round(c.decision.model_prob, 4),
                              "p_market": c.decision.market_prob, "ev": round(c.decision.ev, 2),
@@ -286,7 +294,7 @@ def place(plan, target, led, now_et, errors=None):
             if filled > 0:
                 led.add(paper.Fill(o.ticker, o.icao, key, o.side, o.lo, o.hi, avg_cost, filled,
                                    maker=False, fee=fee_total,
-                                   p_model=o.p_model, p_market=o.p_market))
+                                   p_model=o.p_model, p_market=o.p_market, wanted=o.count))
                 placed.append((o, filled, avg_cost)); total += filled
         except Exception as e:
             print(f"  ✗ {o.icao} {o.side.upper()} {bucket(o)} FAILED: {type(e).__name__}: {e}")

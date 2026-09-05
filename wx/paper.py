@@ -34,6 +34,7 @@ class Fill:
     fee: float = None        # total dollars of fees actually paid at fill (None = estimate)
     p_model: float = None    # raw model P(side wins) at decision time — calibration ledger
     p_market: float = None   # market mid for the side at decision time
+    wanted: int = None       # contracts requested; count/wanted is the fill rate
 
 
 def settle_pnl(f: Fill, realized_high: float) -> float:

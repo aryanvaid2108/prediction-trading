@@ -65,6 +65,7 @@ def test_quote_error_is_logged_and_reported(tmp_path, monkeypatch):
     assert {r["icao"] for r in recs} == {"KMDW", "KAUS"}
     kaus = next(r for r in recs if r["icao"] == "KAUS")
     assert kaus["mu"] == 97.8 and all("gated" in c for c in kaus["cands"])
+    assert len(kaus["buckets"]) == 2 and {"p_model", "p_market", "lo", "hi"} <= set(kaus["buckets"][0])
 
 
 def test_paper_fill_is_capped_by_resting_depth():
@@ -125,3 +126,25 @@ def test_dashboard_rules_come_from_the_live_workflow():
     assert env["LIVE_BANKROLL"] == "150" and env["LIVE_ROBUST_DELTA"] == "1.0"
     rules = " ".join(strategy()["rules"])
     assert "Bankroll $150" in rules and "off by 1°F" in rules and "below 15¢" in rules
+
+
+def test_fill_rate_from_wanted_vs_filled(tmp_path):
+    from scripts.calibration_report import fill_rate
+    led = paper.Ledger(tmp_path / "l.json")
+    led.add(paper.Fill("A", "KMDW", "2026-09-03", "yes", 92, 93, 0.1053, 65, wanted=65))
+    led.add(paper.Fill("B", "KSFO", "2026-09-02", "no", 71, 72, 0.30, 2, wanted=25))
+    fr = fill_rate(led)
+    assert fr["<0.20"] == (65, 65, 1.0) and fr[">=0.20"] == (2, 25, 0.08)
+
+
+def test_live_brier_by_slot_scores_every_bucket(tmp_path, monkeypatch):
+    from scripts import calibration_report as cr
+    import pandas as pd
+    d = tmp_path / "ticks"; d.mkdir()
+    (d / "a.jsonl").write_text(json.dumps({"slot": 15, "target": "2026-09-03", "icao": "KMDW", "buckets": [
+        {"ticker": "B92.5", "lo": 92, "hi": 93, "p_model": 0.6, "p_market": 0.2},
+        {"ticker": "B94.5", "lo": 94, "hi": 95, "p_model": 0.1, "p_market": 0.4}]}) + "\n")
+    monkeypatch.setattr(cr.cli, "settlement_high",
+                        lambda icao, a, b: pd.Series({pd.Timestamp("2026-09-03"): 92.0}))
+    out = cr.brier_by_hour(d)
+    assert out[15]["n"] == 2 and out[15]["model"] < out[15]["market"]

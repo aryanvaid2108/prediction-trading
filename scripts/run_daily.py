@@ -68,7 +68,7 @@ def record(ledgers, icao, target, q, ms, books, session, slot=None):
         m = by[d.ticker]
         lo, hi = trading.market_bounds(m["strike_type"], m.get("floor"), m.get("cap"))
         led.add(paper.Fill(d.ticker, icao, key, d.side, lo, hi, d.price, count, maker=False,
-                           p_model=d.model_prob, p_market=d.market_prob))
+                           p_model=d.model_prob, p_market=d.market_prob, wanted=d.count))
         out[name] = (d, count)
         print(f"    {name}: {d.side.upper()} {d.ticker} {count}x @ {d.price:.2f}")
     return out
