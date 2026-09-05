@@ -67,6 +67,10 @@ ARMS = {
 
 # What changed in the LIVE rules and why — newest first. Shown on the dashboard.
 CHANGES = [
+    ("2026-09-05", "Nine cities added (Houston, Atlanta, Dallas, Las Vegas, Minneapolis, New Orleans, "
+                   "Oklahoma City, Phoenix, Seattle): each passed the live-rules backtest with real-volume "
+                   "fill caps and matched Kalshi's settlement 41 of 41 days. Daily budget now goes to the "
+                   "best-EV trades first."),
     ("2026-09-04", "Forecast-error check loosened from 1.5°F to 1.0°F: it was blocking most of the "
                    "backtest's profit, and the looser check held up under real hourly volume caps."),
     ("2026-09-04", "Trades only inside three tick slots (11:00, 13:00, 15:00 ET); orders re-priced on "
