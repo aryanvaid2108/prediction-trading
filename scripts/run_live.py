@@ -78,6 +78,7 @@ class Order:
     p_market: float = None
     market: dict = None       # summary quote the plan was built from
     quote: object = None      # LiveQuote, to re-select on the live book
+    ev: float = 0.0           # expected value at plan time; orders the daily budget
 
 
 def risk_gate(led, target, loss_cap=None, resume=None):
@@ -200,11 +201,12 @@ def build_plan(icaos, target, now_utc, led, quotes=None, slot=None):
         m = by[d.ticker]
         lo, hi = trading.market_bounds(m["strike_type"], m.get("floor"), m.get("cap"))
         plan.append(Order(icao, d.ticker, d.side, lo, hi, d.price, d.count, maker=False,
-                          p_model=d.model_prob, p_market=d.market_prob, market=m, quote=q))
-    # global cap across all stations, net of what is already staked live today
+                          p_model=d.model_prob, p_market=d.market_prob, market=m, quote=q, ev=d.ev))
+    # global cap across all stations, net of what is already staked live today;
+    # with many cities the cap binds, so the best-EV theses get the budget first
     total_left = MAX_TOTAL_STAKE - sum(f.count * f.price for f in led.fills if f.target == key)
     kept, spent = [], 0.0
-    for o in plan:
+    for o in sorted(plan, key=lambda o: -o.ev):
         stake = o.count * o.price
         if spent + stake > total_left:
             continue

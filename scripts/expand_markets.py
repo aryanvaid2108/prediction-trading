@@ -27,7 +27,7 @@ from scripts.pressure_test import DESIGN, HOLDOUT, daily, max_drawdown
 
 
 def register(c):
-    st = Station(c["icao"], c["series"], c["iem_id"], c.get("name", c["icao"]),
+    st = Station(c["icao"], c["series"], c["iem_id"], c.get("name") or c.get("city") or c["icao"],
                  float(c["lat"]), float(c["lon"]), int(c["std_utc_offset"]), c.get("wfo", ""))
     stations.STATIONS[st.icao] = st
     return st

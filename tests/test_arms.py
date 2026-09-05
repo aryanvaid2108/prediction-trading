@@ -148,3 +148,17 @@ def test_live_brier_by_slot_scores_every_bucket(tmp_path, monkeypatch):
                         lambda icao, a, b: pd.Series({pd.Timestamp("2026-09-03"): 92.0}))
     out = cr.brier_by_hour(d)
     assert out[15]["n"] == 2 and out[15]["model"] < out[15]["market"]
+
+
+def test_daily_budget_goes_to_the_best_ev_first(tmp_path, monkeypatch):
+    led = paper.Ledger(tmp_path / "live.json")
+    weak = [{"ticker": "W", "strike_type": "between", "floor": 99, "cap": 100,
+             "yes_bid": 0.66, "yes_ask": 0.68, "no_bid": 0.32, "no_ask": 0.34}]
+    quotes = {"KAUS": (Q, MS), "KDEN": (_Q(97.8, 1.26), weak)}
+    plan, spent, _ = run_live.build_plan(["KDEN", "KAUS"], date(2026, 8, 29),
+                                         datetime(2026, 8, 29, 19, 41, tzinfo=timezone.utc), led, quotes=quotes)
+    assert len(plan) == 2 and plan[0].ev >= plan[1].ev and plan[0].ev > 0
+    monkeypatch.setattr(run_live, "MAX_TOTAL_STAKE", plan[0].count * plan[0].price + 0.5)
+    plan2, spent, _ = run_live.build_plan(["KDEN", "KAUS"], date(2026, 8, 29),
+                                          datetime(2026, 8, 29, 19, 41, tzinfo=timezone.utc), led, quotes=quotes)
+    assert [o.icao for o in plan2] == [plan[0].icao]          # the budget went to the best thesis
