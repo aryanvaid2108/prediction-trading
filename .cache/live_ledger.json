@@ -389,5 +389,39 @@
     "p_model": 0.8655,
     "p_market": 0.37,
     "wanted": null
+  },
+  {
+    "ticker": "KXHIGHTHOU-26SEP06-B90.5",
+    "icao": "KHOU",
+    "target": "2026-09-06",
+    "side": "yes",
+    "lo": 90.0,
+    "hi": 91.0,
+    "price": 0.26,
+    "count": 41,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": 0.5494,
+    "p_model": 0.6905,
+    "p_market": 0.255,
+    "wanted": 41
+  },
+  {
+    "ticker": "KXHIGHCHI-26SEP06-B79.5",
+    "icao": "KMDW",
+    "target": "2026-09-06",
+    "side": "no",
+    "lo": 79.0,
+    "hi": 80.0,
+    "price": 0.19,
+    "count": 24,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": 0.2568,
+    "p_model": 0.5329999999999999,
+    "p_market": 0.16999999999999993,
+    "wanted": 24
   }
 ]
