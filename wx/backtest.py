@@ -25,13 +25,15 @@ def realized_high(st: Station, start: date, end: date) -> pd.Series:
     return official.combine_first(recon)
 
 
-def build_archive_table_wide(st: Station, start: date, end: date):
+def build_archive_table_wide(st: Station, start: date, end: date, models: str = None):
     """Per-model daily highs (one column each) + ensemble mean/spread + realized.
 
     Returns (table, model_cols) so a multi-predictor model can learn per-model
-    weights instead of collapsing to an equal-weight mean.
+    weights instead of collapsing to an equal-weight mean. `models` overrides
+    the default archive model list (research sweeps).
     """
-    members = fetch_members_archive(st.lat, st.lon, start, end)
+    members = (fetch_members_archive(st.lat, st.lon, start, end, models=models) if models
+               else fetch_members_archive(st.lat, st.lon, start, end))
     mh = member_daily_highs(members, st.std_utc_offset)
     wide = mh.pivot(index="day", columns="member", values="high")
     model_cols = list(wide.columns)

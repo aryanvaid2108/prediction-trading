@@ -28,7 +28,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-from wx import backtest, cli, intraday, kalshi, obs, stations, strategies, trading
+from wx import backtest, cli, histcache, intraday, kalshi, obs, stations, strategies, trading
 
 BANKROLL = 750.0
 KELLY = 0.25
@@ -95,29 +95,50 @@ class Quote:
             self.shift_fn = lambda dd: trading.gaussian_prob(mu0 + dd, s0)
 
 
-def snapshot_station(ic, start, end, rng, ticks=ALL_TICKS):
-    """One record per (day, tick): the quote's samples, the priced book, the
-    next-tick book (execution research) and the CLI outcome. Returns (records, ndays)."""
-    st = stations.get(ic)
+# Model-research knobs (scripts.model_sweep). Defaults reproduce the live quote.
+BASE_VARIANT = {"window": 45, "models": None, "bias_days": 0, "shrink_clip": (0.7, 1.3)}
+
+
+def _inputs(st, start, end, ticks, models):
+    """Network inputs for a snapshot, disk-cached (history ends before today):
+    archive table for the model set, hourly obs, CLI finals, 1-min prep."""
     hours_lst = sorted({EARLY} | {h + st.std_utc_offset for h in ticks})
-    table, cols = backtest.build_archive_table_wide(st, start - timedelta(days=50), end)
-    scored = backtest.rolling_score_mixed(table, cols, min_train=45, window=45)
-    calib = backtest.calibration_factor(scored)
-    sc = scored.set_index(pd.to_datetime(scored["day"]))
-    o = obs.fetch_asos(st.iem_id, start - timedelta(days=51), end + timedelta(days=2))
-    prep = intraday.prep(o, st.std_utc_offset, hours_lst)
-    prep = prep.assign(day=pd.to_datetime(prep["day"])).set_index("day")
-    finals = cli.settlement_high(st.icao, start - timedelta(days=50), end)
+    s0, e2 = start - timedelta(days=50), end + timedelta(days=2)
+    tag = f"{st.icao}_{start}_{end}"
+    table, cols = histcache.get(f"bt_table_{tag}_{(models or 'base').replace(',', '+')}", end,
+                                lambda: backtest.build_archive_table_wide(st, s0, end, models=models))
+    o = histcache.get(f"bt_obs_{tag}", end,
+                      lambda: obs.fetch_asos(st.iem_id, start - timedelta(days=51), e2))
+    finals = histcache.get(f"bt_cli_{tag}", end, lambda: cli.settlement_high(st.icao, s0, end))
     om = pd.DataFrame()
     if ONEMIN:
-        try:
+        def _om():
             m1 = obs.fetch_asos_1min(st.iem_id, start, end + timedelta(days=1))
-            om = intraday.prep_1min(m1, st.std_utc_offset, hours_lst)
-            om = om.assign(day=pd.to_datetime(om["day"])).set_index("day")
+            x = intraday.prep_1min(m1, st.std_utc_offset, hours_lst)
+            return x.assign(day=pd.to_datetime(x["day"])).set_index("day")
+        try:
+            om = histcache.get(f"bt_1min_{tag}", end, _om)
         except Exception as ex:
-            print(f"  {ic}: 1-min feed unavailable ({type(ex).__name__}) — hourly floor only")
+            print(f"  {st.icao}: 1-min feed unavailable ({type(ex).__name__}) — hourly floor only")
+    return table, cols, o, finals, om, hours_lst
+
+
+def snapshot_station(ic, start, end, rng, ticks=ALL_TICKS, variant=None):
+    """One record per (day, tick): the quote's samples, the priced book, the
+    next-tick book (execution research) and the CLI outcome. Returns (records, ndays).
+    `variant` (see BASE_VARIANT) changes the retrain window, the archive model
+    set, a walk-forward bias correction and the PIT-shrink clip — research only."""
+    v = {**BASE_VARIANT, **(variant or {})}
+    st = stations.get(ic)
+    table, cols, o, finals, om, hours_lst = _inputs(st, start, end, ticks, v["models"])
+    scored = backtest.rolling_score_mixed(table, cols, min_train=min(45, v["window"]), window=v["window"])
+    calib = backtest.calibration_factor(scored)
+    sc = scored.set_index(pd.to_datetime(scored["day"]))
+    prep = intraday.prep(o, st.std_utc_offset, hours_lst)
+    prep = prep.assign(day=pd.to_datetime(prep["day"])).set_index("day")
 
     zhist = {h: [] for h in hours_lst}
+    ehist = {h: [] for h in hours_lst}          # (day, y - quote mean): walk-forward bias
     recs = []
     days = sorted(sc.index.intersection(prep.index).intersection(finals.index))
     days = [d for d in days if d >= pd.Timestamp(start)]
@@ -156,12 +177,18 @@ def snapshot_station(ic, start, end, rng, ticks=ALL_TICKS):
                 clipped = np.clip(raw, round(float(rm_d)) - 0.5, None)
                 pit = float(np.clip((clipped < y).mean(), 1e-4, 1 - 1e-4))
                 zh = zhist[h]
-                shrink = float(np.clip(np.std(zh) * 1.1, 0.7, 1.3)) if len(zh) >= 25 else 1.0
+                lo_c, hi_c = v["shrink_clip"]
+                shrink = float(np.clip(np.std(zh) * 1.1, lo_c, hi_c)) if len(zh) >= 25 else 1.0
                 zh.append(float(norm.ppf(pit)))
                 floor_d = float(rm_d)
                 if f"om_{h}" in om.columns and d in om.index and pd.notna(om.loc[d, f"om_{h}"]):
                     floor_d = max(floor_d, float(om.loc[d, f"om_{h}"]))
                 samples = raw.mean() + (raw - raw.mean()) * shrink
+                if v["bias_days"]:
+                    eh = [e for dd, e in ehist[h] if (d - dd).days <= v["bias_days"]]
+                    if len(eh) >= 10:
+                        samples = samples + float(np.mean(eh))
+                ehist[h].append((d, y - float(samples.mean())))
                 samples = np.clip(samples, round(floor_d) - 0.5, None).astype(np.float32)
 
             priced, nxt = [], {}
@@ -177,14 +204,16 @@ def snapshot_station(ic, start, end, rng, ticks=ALL_TICKS):
     return recs, len(days)
 
 
-def load_snapshot(ic, start, end, rng=None):
+def load_snapshot(ic, start, end, rng=None, variant=None):
     """Disk-cached snapshot_station (the network-heavy stage)."""
     SNAP_DIR.mkdir(exist_ok=True)
     tag = f"{'flow_' if FLOW else ''}{'1min' if ONEMIN else 'hourly'}"
+    if variant:
+        tag += "_" + "_".join(f"{k}={str(v).replace(',', '+').replace(' ', '')}" for k, v in sorted(variant.items()))
     p = SNAP_DIR / f"{ic}_{start}_{end}_{tag}.pkl"
     if p.exists():
         return pickle.loads(p.read_bytes())
-    out = snapshot_station(ic, start, end, rng or np.random.default_rng(3))
+    out = snapshot_station(ic, start, end, rng or np.random.default_rng(3), variant=variant)
     p.write_bytes(pickle.dumps(out))
     return out
 
