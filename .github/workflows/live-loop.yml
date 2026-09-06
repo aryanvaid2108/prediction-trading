@@ -84,6 +84,8 @@ jobs:
           LIVE_BANKROLL: "150"
           # robust gate ±1.0° (was 1.5): pressure test + real-volume liquidity check, Sep 4
           LIVE_ROBUST_DELTA: "1.0"
+          # daily loss kill-switch: $15 was sized for ~1 trade/day; 16 cities make 2-3 (Sep 6)
+          LIVE_DAILY_LOSS_CAP: "40"
           LIVE_RESUME: ${{ inputs.resume }}
           LIVE_FORCE: ${{ inputs.force }}
         run: python -m scripts.run_live

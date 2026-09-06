@@ -67,6 +67,8 @@ ARMS = {
 
 # What changed in the LIVE rules and why — newest first. Shown on the dashboard.
 CHANGES = [
+    ("2026-09-06", "Daily loss kill-switch raised from $15 to $40: the $15 cap was sized for one trade "
+                   "a day and 16 cities make two to three."),
     ("2026-09-05", "Nine cities added (Houston, Atlanta, Dallas, Las Vegas, Minneapolis, New Orleans, "
                    "Oklahoma City, Phoenix, Seattle): each passed the live-rules backtest with real-volume "
                    "fill caps and matched Kalshi's settlement 41 of 41 days. Daily budget now goes to the "
