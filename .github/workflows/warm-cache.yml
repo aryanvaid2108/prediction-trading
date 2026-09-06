@@ -1,0 +1,30 @@
+name: warm-cache
+
+# Builds the day's history cache before the 15Z slot so the morning live tick
+# (the one that matters) starts warm. Cron may be delayed; a late warm is
+# harmless and a missed one just means the 15Z run pays the cold cost itself.
+on:
+  schedule:
+    - cron: "0 12 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  warm:
+    runs-on: ubuntu-latest
+    steps:
+      - id: day
+        run: echo "day=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - uses: actions/cache@v4
+        with:
+          path: .cache/hist
+          key: hist-${{ steps.day.outputs.day }}
+      - name: Warm history for every active station (+ shadow models)
+        env:
+          WX_SHADOW_MODELS: "ncep_hrrr_conus"
+        run: python -m scripts.warm_cache
