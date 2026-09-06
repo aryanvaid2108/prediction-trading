@@ -45,6 +45,7 @@ SLOTS_UTC = tuple(int(h) for h in os.environ.get("LIVE_SLOTS_UTC", "15,17,19").s
 SLOT_MINUTES = int(os.environ.get("LIVE_SLOT_MINUTES", str(strategies.SLOT_MINUTES)))
 CROSS = float(os.environ.get("LIVE_CROSS_CENTS", "1")) / 100   # cross the touch to fill now
 WORKERS = int(os.environ.get("WX_WORKERS", "2"))                # concurrent station quotes (IEM 503s at 6)
+SHADOW_MODELS = os.environ.get("WX_SHADOW_MODELS", "")          # extra forecast models quoted alongside, logged only
 MARKET_TZ = ZoneInfo("America/New_York")
 WINDOW_ET = (10, 16)
 LIVE_LEDGER = paper.LEDGER_DIR / "live_ledger.json"
@@ -105,9 +106,19 @@ def risk_gate(led, target, loss_cap=None, resume=None):
 
 
 def quote_station(icao, target, now_utc):
-    """(quote, markets) for one station — the slow, network-bound part of a tick."""
+    """(quote, markets) for one station — the slow, network-bound part of a tick.
+    With WX_SHADOW_MODELS set, a second quote with those models added rides
+    along as quote.shadow: scored in the tick ledger, never traded — the honest
+    A/B for a model change (the archive's shortest-lead runs flatter backtests)."""
     st = get(icao)
-    return pipeline.quote_live(st, target, now_utc=now_utc), kalshi.markets(st.kalshi, target)
+    q = pipeline.quote_live(st, target, now_utc=now_utc)
+    if SHADOW_MODELS:
+        try:
+            from wx.forecast import ARCHIVE_MODELS
+            q.shadow = pipeline.quote_live(st, target, now_utc=now_utc, models=ARCHIVE_MODELS + "," + SHADOW_MODELS)
+        except Exception as e:
+            print(f"  {icao}: shadow quote failed ({type(e).__name__})")
+    return q, kalshi.markets(st.kalshi, target)
 
 
 def quote_all(icaos, target, now_utc, workers=None):
@@ -175,15 +186,21 @@ def build_plan(icaos, target, now_utc, led, quotes=None, slot=None):
                   f"p_mkt={d.market_prob if d.market_prob is None else round(d.market_prob, 2)} "
                   f"ev=${d.ev:.2f} gate={'PASS' if c.gated else 'KILL'} ({c.worst_edge:+.3f})")
         buckets = []
+        shadow = getattr(q, "shadow", None)
         for m in ms:
             if m.get("yes_ask") is None or m.get("yes_bid") is None:
                 continue
             lo_, hi_ = trading.market_bounds(m["strike_type"], m.get("floor"), m.get("cap"))
-            buckets.append({"ticker": m["ticker"], "lo": lo_, "hi": hi_,
-                            "p_model": round(q.prob_fn(lo_, hi_), 4),
-                            "p_market": round((m["yes_ask"] + m["yes_bid"]) / 2, 4)})
+            b = {"ticker": m["ticker"], "lo": lo_, "hi": hi_,
+                 "p_model": round(q.prob_fn(lo_, hi_), 4),
+                 "p_market": round((m["yes_ask"] + m["yes_bid"]) / 2, 4)}
+            if shadow is not None:
+                b["p_shadow"] = round(shadow.prob_fn(lo_, hi_), 4)
+            buckets.append(b)
         log_tick({**base, "mu": round(q.mu, 2), "sigma": round(q.sigma, 3),
                   "obs_max": q.observed_max, "intraday": q.intraday_active, "buckets": buckets,
+                  "shadow": ({"models": SHADOW_MODELS, "mu": round(shadow.mu, 2), "sigma": round(shadow.sigma, 3)}
+                             if shadow is not None else None),
                   "cands": [{"ticker": c.decision.ticker, "side": c.decision.side,
                              "ask": c.decision.price, "p_model": round(c.decision.model_prob, 4),
                              "p_market": c.decision.market_prob, "ev": round(c.decision.ev, 2),

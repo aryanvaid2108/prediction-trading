@@ -84,7 +84,7 @@ def brier_by_hour(tick_dir=TICK_DIR):
             highs[icao] = {d.date(): v for d, v in cli.settlement_high(icao, days[0], days[-1]).items()}
         except Exception as e:
             print(f"  {icao}: CLI unavailable ({type(e).__name__})")
-    by = {}
+    by, sh = {}, {}
     for r in recs:
         y = highs.get(r["icao"], {}).get(date.fromisoformat(r["target"]))
         if y is None:
@@ -92,12 +92,18 @@ def brier_by_hour(tick_dir=TICK_DIR):
         for b in r["buckets"]:
             hit = 1.0 if ((b["lo"] is None or y >= b["lo"]) and (b["hi"] is None or y <= b["hi"])) else 0.0
             by.setdefault(r["slot"], []).append(((b["p_model"] - hit) ** 2, (b["p_market"] - hit) ** 2))
+            if "p_shadow" in b:
+                sh.setdefault(r["slot"], []).append((b["p_shadow"] - hit) ** 2)
     out = {}
     for slot in sorted(by):
         n = len(by[slot]); bm = sum(a for a, _ in by[slot]) / n; bk = sum(b for _, b in by[slot]) / n
         out[slot] = {"n": n, "model": round(bm, 4), "market": round(bk, 4)}
-        print(f"  {slot:02d}Z: n={n:4}  model {bm:.4f}  market {bk:.4f}  "
-              f"{'MODEL' if bm < bk else 'market'} leads by {abs(bm - bk):.4f}")
+        line = (f"  {slot:02d}Z: n={n:4}  model {bm:.4f}  market {bk:.4f}  "
+                f"{'MODEL' if bm < bk else 'market'} leads by {abs(bm - bk):.4f}")
+        if sh.get(slot):
+            bs = sum(sh[slot]) / len(sh[slot]); out[slot]["shadow"] = round(bs, 4)
+            line += f"  | shadow {bs:.4f} ({'better' if bs < bm else 'worse'} than live model)"
+        print(line)
     return out
 
 

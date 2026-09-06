@@ -66,6 +66,20 @@ def test_quote_error_is_logged_and_reported(tmp_path, monkeypatch):
     kaus = next(r for r in recs if r["icao"] == "KAUS")
     assert kaus["mu"] == 97.8 and all("gated" in c for c in kaus["cands"])
     assert len(kaus["buckets"]) == 2 and {"p_model", "p_market", "lo", "hi"} <= set(kaus["buckets"][0])
+    assert kaus["shadow"] is None and "p_shadow" not in kaus["buckets"][0]
+
+
+def test_shadow_quote_is_logged_not_traded(tmp_path, monkeypatch):
+    monkeypatch.setattr(run_live, "TICK_LOG" if hasattr(run_live, "TICK_LOG") else "TICK_DIR", tmp_path / "ticks")
+    monkeypatch.setattr(run_live, "LOG_TICKS", True)
+    monkeypatch.setattr(run_live, "SHADOW_MODELS", "ncep_hrrr_conus")
+    q = _Q(97.8, 1.26); q.shadow = _Q(99.0, 1.0)          # the shadow disagrees; it must not change the plan
+    led = paper.Ledger(tmp_path / "live.json")
+    plan, _, _ = run_live.build_plan(["KAUS"], date(2026, 8, 29), datetime(2026, 8, 29, 19, 41, tzinfo=timezone.utc),
+                                     led, quotes={"KAUS": (q, MS)}, slot=19)
+    rec = json.loads(next((tmp_path / "ticks").glob("*.jsonl")).read_text().splitlines()[0])
+    assert rec["shadow"]["mu"] == 99.0 and all("p_shadow" in b for b in rec["buckets"])
+    assert plan and plan[0].p_model == strategies.select(MS, q, run_live.BANKROLL, run_live.ARM)[0].model_prob
 
 
 def test_paper_fill_is_capped_by_resting_depth():

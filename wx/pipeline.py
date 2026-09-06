@@ -63,7 +63,8 @@ class LiveQuote:
 
 
 def quote_live(st: Station, target: date = None, now_utc: datetime = None,
-               train_days: int = 75, window: int = 45, ridge: float = 0.5) -> LiveQuote:
+               train_days: int = 75, window: int = 45, ridge: float = 0.5,
+               models: str = None) -> LiveQuote:
     """Forecast prior blended with today's observations so far.
 
     Precision-weighted blend: in the morning the intraday residual spread is wide
@@ -75,8 +76,8 @@ def quote_live(st: Station, target: date = None, now_utc: datetime = None,
 
     # --- forecast prior (Mixed EMOS) + data-driven sigma calibration ---
     t0, t1 = target - timedelta(days=train_days), target - timedelta(days=1)
-    table, cols = histcache.get(f"archive_{st.icao}_{t0}_{t1}", t1,
-                                lambda: build_archive_table_wide(st, t0, t1))
+    table, cols = histcache.get(f"archive_{st.icao}_{t0}_{t1}{'_' + models.replace(',', '+') if models else ''}", t1,
+                                lambda: build_archive_table_wide(st, t0, t1, models=models))
     tr = table.tail(window)
     model = emos.fit_mixed(tr[cols].to_numpy(), (tr["ens_std"].to_numpy() ** 2).reshape(-1, 1),
                            tr["high"].to_numpy(), ridge=ridge)
@@ -84,7 +85,8 @@ def quote_live(st: Station, target: date = None, now_utc: datetime = None,
     calib = calibration_factor(scored)
 
     if target >= date.today():
-        members = fetch_members_forecast(st.lat, st.lon, forecast_days=(target - date.today()).days + 2)
+        members = fetch_members_forecast(st.lat, st.lon, forecast_days=(target - date.today()).days + 2,
+                                         **({"models": models} if models else {}))
     else:  # historical simulation: use the archived forecast for that day
         members = fetch_members_archive(st.lat, st.lon, target, target)
     wide = member_daily_highs(members, st.std_utc_offset).pivot(index="day", columns="member", values="high")

@@ -86,6 +86,8 @@ jobs:
           LIVE_ROBUST_DELTA: "1.0"
           # daily loss kill-switch: $15 was sized for ~1 trade/day; 16 cities make 2-3 (Sep 6)
           LIVE_DAILY_LOSS_CAP: "40"
+          # shadow quote with HRRR added, scored in the tick ledger, never traded (Sep 6)
+          WX_SHADOW_MODELS: "ncep_hrrr_conus"
           LIVE_RESUME: ${{ inputs.resume }}
           LIVE_FORCE: ${{ inputs.force }}
         run: python -m scripts.run_live

@@ -38,13 +38,13 @@ def _get_hourly(url: str, params: dict, timeout: int, retries: int = 4) -> dict:
     raise last
 
 
-def _parse_members(hourly: dict) -> pd.DataFrame:
+def _parse_members(hourly: dict, var: str = "temperature_2m") -> pd.DataFrame:
     time = pd.to_datetime(hourly["time"])
     frames = []
     for col, vals in hourly.items():
-        if not col.startswith("temperature_2m"):
+        if not col.startswith(var):
             continue
-        member = col[len("temperature_2m"):].lstrip("_") or "ctl"
+        member = col[len(var):].lstrip("_") or "ctl"
         frames.append(pd.DataFrame({"valid": time, "member": member, "tmpf": vals}))
     return pd.concat(frames, ignore_index=True)
 
@@ -73,18 +73,24 @@ def fetch_members_forecast(lat: float, lon: float, forecast_days: int = 2,
 
 
 def fetch_members_archive(lat: float, lon: float, start: date, end: date,
-                          models: str = ARCHIVE_MODELS, timeout: int = 120) -> pd.DataFrame:
+                          models: str = ARCHIVE_MODELS, timeout: int = 120,
+                          lead: str = None) -> pd.DataFrame:
     """Archived hourly forecasts from multiple operational models, one per member.
 
     Each model is treated as an ensemble member so the same daily-high and
     feature code applies. Covers years of history, unlike the live endpoint.
+    By default the archive serves the SHORTEST-lead run for every hour (for
+    hourly-cycled HRRR that is nearly an observation); lead="previous_day1"
+    asks for the run issued the day before — pessimistic for a same-day tick,
+    but free of look-ahead.
     """
+    var = "temperature_2m" + (f"_{lead}" if lead else "")
     params = {
-        "latitude": lat, "longitude": lon, "hourly": "temperature_2m",
+        "latitude": lat, "longitude": lon, "hourly": var,
         "models": models, "start_date": start.isoformat(), "end_date": end.isoformat(),
         "temperature_unit": "fahrenheit", "timezone": "GMT",
     }
-    return _parse_members(_get_hourly(ARCHIVE_URL, params, timeout))
+    return _parse_members(_get_hourly(ARCHIVE_URL, params, timeout), var)
 
 
 def member_daily_highs(members: pd.DataFrame, std_utc_offset: int) -> pd.DataFrame:

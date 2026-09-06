@@ -27,7 +27,11 @@ VARIANTS = [
     ("+ukmo",                  {"models": hb.backtest.fetch_members_archive.__defaults__[0] + ",ukmo_seamless"}),
     ("+nbm",                   {"models": hb.backtest.fetch_members_archive.__defaults__[0] + ",ncep_nbm_conus"}),
     ("+hrrr",                  {"models": hb.backtest.fetch_members_archive.__defaults__[0] + ",ncep_hrrr_conus"}),
-    ("+aifs+graphcast",        {"models": hb.backtest.fetch_members_archive.__defaults__[0] + ",ecmwf_aifs025_single,gfs_graphcast025"}),
+    # honest lead: only the runs issued the day before (the archive's default is the
+    # shortest lead per hour — for hourly-cycled HRRR that is nearly an observation)
+    ("base, previous-day runs",  {"lead": "previous_day1"}),
+    ("+hrrr, previous-day runs", {"lead": "previous_day1",
+                                  "models": hb.backtest.fetch_members_archive.__defaults__[0] + ",ncep_hrrr_conus"}),
 ]
 
 

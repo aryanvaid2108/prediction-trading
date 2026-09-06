@@ -96,17 +96,17 @@ class Quote:
 
 
 # Model-research knobs (scripts.model_sweep). Defaults reproduce the live quote.
-BASE_VARIANT = {"window": 45, "models": None, "bias_days": 0, "shrink_clip": (0.7, 1.3)}
+BASE_VARIANT = {"window": 45, "models": None, "bias_days": 0, "shrink_clip": (0.7, 1.3), "lead": None}
 
 
-def _inputs(st, start, end, ticks, models):
+def _inputs(st, start, end, ticks, models, lead=None):
     """Network inputs for a snapshot, disk-cached (history ends before today):
     archive table for the model set, hourly obs, CLI finals, 1-min prep."""
     hours_lst = sorted({EARLY} | {h + st.std_utc_offset for h in ticks})
     s0, e2 = start - timedelta(days=50), end + timedelta(days=2)
     tag = f"{st.icao}_{start}_{end}"
-    table, cols = histcache.get(f"bt_table_{tag}_{(models or 'base').replace(',', '+')}", end,
-                                lambda: backtest.build_archive_table_wide(st, s0, end, models=models))
+    table, cols = histcache.get(f"bt_table_{tag}_{(models or 'base').replace(',', '+')}{'_' + lead if lead else ''}", end,
+                                lambda: backtest.build_archive_table_wide(st, s0, end, models=models, lead=lead))
     o = histcache.get(f"bt_obs_{tag}", end,
                       lambda: obs.fetch_asos(st.iem_id, start - timedelta(days=51), e2))
     finals = histcache.get(f"bt_cli_{tag}", end, lambda: cli.settlement_high(st.icao, s0, end))
@@ -130,7 +130,7 @@ def snapshot_station(ic, start, end, rng, ticks=ALL_TICKS, variant=None):
     set, a walk-forward bias correction and the PIT-shrink clip — research only."""
     v = {**BASE_VARIANT, **(variant or {})}
     st = stations.get(ic)
-    table, cols, o, finals, om, hours_lst = _inputs(st, start, end, ticks, v["models"])
+    table, cols, o, finals, om, hours_lst = _inputs(st, start, end, ticks, v["models"], v["lead"])
     scored = backtest.rolling_score_mixed(table, cols, min_train=min(45, v["window"]), window=v["window"])
     calib = backtest.calibration_factor(scored)
     sc = scored.set_index(pd.to_datetime(scored["day"]))
