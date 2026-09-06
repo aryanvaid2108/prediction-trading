@@ -39,7 +39,7 @@ MAXC = 300                      # crude liquidity cap per order
 NEW_FILTERS = os.environ.get("BT_NEW_FILTERS", "1") == "1"
 DEPTH_AWARE = os.environ.get("BT_DEPTH", "1") == "1"
 FLOW = os.environ.get("BT_FLOW", "0") == "1"   # flow residual pool: evaluated a wash, off by default
-ONEMIN = os.environ.get("BT_1MIN", "1") == "1" # settlement-grade floor from sustained 1-min max
+ONEMIN = os.environ.get("BT_1MIN", "0") == "1" # 1-min floor: inert LIVE (feed lags days) -> off by default so backtests match live; BT_1MIN=1 to study it
 MODEL_W = float(os.environ.get("BT_MODEL_W", "1"))   # 0.5 = live shrinkage setting
 SLIP = 0.01
 EARLY = 9
