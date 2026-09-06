@@ -162,7 +162,7 @@ def main():
     }
     data = {
         "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
-        "bankroll": strategy()["bankroll"], "today": today.isoformat(), "active": stations.ACTIVE,
+        "bankroll": strategy()["bankroll"], "today": today.isoformat(), "active": stations.LIVE,
         "envs": envs,
         # every paper arm vs the control — the daily strategy A/B
         "arms": {name: led.summary() for name, led in arms.items()},

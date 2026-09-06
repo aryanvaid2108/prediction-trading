@@ -96,7 +96,8 @@ class Quote:
 
 
 # Model-research knobs (scripts.model_sweep). Defaults reproduce the live quote.
-BASE_VARIANT = {"window": 45, "models": None, "bias_days": 0, "shrink_clip": (0.7, 1.3), "lead": None}
+BASE_VARIANT = {"window": 45, "models": None, "bias_days": 0, "shrink_clip": (0.7, 1.3), "lead": None,
+                "prior_inflate": 1.0}   # widen the forecast prior's sigma (a weaker-than-archive prior leans on obs)
 
 
 def _inputs(st, start, end, ticks, models, lead=None):
@@ -144,7 +145,7 @@ def snapshot_station(ic, start, end, rng, ticks=ALL_TICKS, variant=None):
     days = [d for d in days if d >= pd.Timestamp(start)]
     for d in days:
         mu0 = float(sc.loc[d, "mu"])
-        s0 = float(sc.loc[d, "sigma"]) * calib
+        s0 = float(sc.loc[d, "sigma"]) * calib * v["prior_inflate"]
         y = float(finals.loc[d])
         try:
             ms = kalshi.markets(st.kalshi, d.date(), session=SESSION)
