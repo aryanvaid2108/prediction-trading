@@ -54,6 +54,14 @@ STATIONS = {
 ACTIVE = ["KNYC", "KMDW", "KAUS", "KLAX", "KSFO", "KDEN", "KPHL",
           "KHOU", "KATL", "KDFW", "KLAS", "KMSP", "KMSY", "KOKC", "KPHX", "KSEA"]
 
+# 2026-09-06: the archive backtest is optimistic about forecast freshness (it
+# serves the shortest-lead run per hour). Re-scored with previous-day runs only
+# (the pessimistic bound), eight cities went negative. Real money trades only
+# where BOTH bounds are positive; paper arms keep trading every ACTIVE city so
+# the live Brier-by-slot monitor can settle where the truth sits.
+LIVE_BENCH = ["KAUS", "KLAX", "KPHL", "KATL", "KLAS", "KOKC", "KPHX", "KSEA"]
+LIVE = [s for s in ACTIVE if s not in LIVE_BENCH]
+
 
 def get(icao: str) -> Station:
     return STATIONS[icao.upper()]

@@ -67,6 +67,11 @@ ARMS = {
 
 # What changed in the LIVE rules and why — newest first. Shown on the dashboard.
 CHANGES = [
+    ("2026-09-06", "Real money now trades 8 cities (NYC, Chicago, Dallas, Houston, New Orleans, Minneapolis, "
+                   "Denver, San Francisco): the ones positive under BOTH backtest bounds. The archive "
+                   "forecast is fresher than what a live tick has, so a previous-day-runs bound was added; "
+                   "Austin, LA, Philadelphia, Atlanta, Las Vegas, OKC, Phoenix, Seattle are paper-only until "
+                   "the live model-vs-market score says otherwise."),
     ("2026-09-06", "Daily loss kill-switch raised from $15 to $40: the $15 cap was sized for one trade "
                    "a day and 16 cities make two to three."),
     ("2026-09-05", "Nine cities added (Houston, Atlanta, Dallas, Las Vegas, Minneapolis, New Orleans, "

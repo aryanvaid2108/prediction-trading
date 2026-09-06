@@ -77,7 +77,7 @@ def strategy() -> dict:
     loss_cap = float(env.get("LIVE_DAILY_LOSS_CAP", 15))
     return {
         "rules": strategies.describe(arm, bankroll, loss_cap,
-                                     stations=[stations.get(ic).name for ic in stations.ACTIVE]),
+                                     stations=[stations.get(ic).name for ic in stations.LIVE]),
         "changes": [{"date": d, "what": w} for d, w in strategies.CHANGES],
         "arms": {name: a.about for name, a in strategies.ARMS.items()},
         "bankroll": bankroll, "loss_cap": loss_cap,

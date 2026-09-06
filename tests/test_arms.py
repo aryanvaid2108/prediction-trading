@@ -176,3 +176,9 @@ def test_daily_budget_goes_to_the_best_ev_first(tmp_path, monkeypatch):
     plan2, spent, _ = run_live.build_plan(["KDEN", "KAUS"], date(2026, 8, 29),
                                           datetime(2026, 8, 29, 19, 41, tzinfo=timezone.utc), led, quotes=quotes)
     assert [o.icao for o in plan2] == [plan[0].icao]          # the budget went to the best thesis
+
+
+def test_live_trades_only_cities_positive_under_both_bounds():
+    from wx import stations
+    assert set(stations.LIVE) == {"KNYC", "KMDW", "KDFW", "KHOU", "KMSY", "KMSP", "KDEN", "KSFO"}
+    assert set(stations.LIVE_BENCH) <= set(stations.ACTIVE) and run_live.DEFAULT_STATIONS == stations.LIVE

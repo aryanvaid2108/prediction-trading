@@ -7,6 +7,7 @@ wx/stations.py), snapshotted over the design + holdout windows with the live
 configuration, and scored:
   parity      Kalshi settled result == NWS CLI high (>= 90%)
   total       P&L as-is and with fills capped at 25% of the hour's traded volume (> 0)
+  honest      P&L with previous-day forecast runs only (the pessimistic bound) (> 0)
   brier       model beats the market mid on every priced bucket
   worst_day   > -$150
 GO only when every gate passes. Nothing here activates a station; that is a
@@ -40,6 +41,10 @@ def score(c):
         recs += hb.load_snapshot(st.icao, s, e)[0]
     rows, kills, cal = hb.simulate(recs, strategies.CONTROL, calibration=True)
     vol = rescore(rows, "vol 25%")
+    honest = []
+    for s, e in (DESIGN, HOLDOUT):                       # previous-day runs only: the pessimistic bound
+        honest += hb.load_snapshot(st.icao, s, e, variant={"lead": "previous_day1"})[0]
+    hrows, _, _ = hb.simulate(honest, strategies.CONTROL)
     d_all = pd.concat([daily(rows, *DESIGN), daily(rows, *HOLDOUT)])
     d_vol = pd.concat([daily(vol, *DESIGN), daily(vol, *HOLDOUT)])
     cdf = pd.DataFrame(cal)
@@ -51,11 +56,12 @@ def score(c):
          "win": round(sum(x["win"] for x in rows) / len(rows), 2) if rows else None,
          "total": round(d_all.sum(), 2), "total_vol25": round(d_vol.sum(), 2),
          "holdout": round(daily(rows, *HOLDOUT).sum(), 2),
+         "total_honest_lead": round(sum(r["pnl"] for r in hrows), 2),
          "median_day": round(d_all.median(), 2), "worst_day": round(d_all.min(), 2),
          "max_dd": round(max_drawdown(d_all), 2),
          "brier_model": round(bm, 4), "brier_market": round(bk, 4)}
     r["verdict"] = "GO" if (c.get("live") and parity >= 0.9 and r["total"] > 0 and r["total_vol25"] > 0
-                            and bm < bk and r["worst_day"] > -150) else "no"
+                            and r["total_honest_lead"] > 0 and bm < bk and r["worst_day"] > -150) else "no"
     return r
 
 

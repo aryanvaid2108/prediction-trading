@@ -52,7 +52,7 @@ LIVE_LEDGER = paper.LEDGER_DIR / "live_ledger.json"
 TICK_DIR = paper.LEDGER_DIR / "ticks"             # every quote + candidate, one file per run (no merge conflicts)
 LOG_TICKS = os.environ.get("LIVE") in ("1", "true", "yes")   # previews stay out of the committed log
 NOTIFY_FILE = paper.LEDGER_DIR / "live_notify.txt"
-DEFAULT_STATIONS = stations.ACTIVE
+DEFAULT_STATIONS = stations.LIVE          # ACTIVE minus LIVE_BENCH; paper trades all of ACTIVE
 
 
 def _write_notify(text):
