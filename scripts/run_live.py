@@ -198,7 +198,8 @@ def build_plan(icaos, target, now_utc, led, quotes=None, slot=None):
                 b["p_shadow"] = round(shadow.prob_fn(lo_, hi_), 4)
             buckets.append(b)
         log_tick({**base, "mu": round(q.mu, 2), "sigma": round(q.sigma, 3),
-                  "obs_max": q.observed_max, "intraday": q.intraday_active, "buckets": buckets,
+                  "obs_max": q.observed_max, "floor_src": getattr(q, "floor_src", None),
+                  "intraday": q.intraday_active, "buckets": buckets,
                   "shadow": ({"models": SHADOW_MODELS, "mu": round(shadow.mu, 2), "sigma": round(shadow.sigma, 3)}
                              if shadow is not None else None),
                   "cands": [{"ticker": c.decision.ticker, "side": c.decision.side,

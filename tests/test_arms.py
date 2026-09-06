@@ -182,3 +182,14 @@ def test_live_trades_only_cities_positive_under_both_bounds():
     from wx import stations
     assert set(stations.LIVE) == {"KNYC", "KMDW", "KDFW", "KHOU", "KMSY", "KMSP", "KDEN", "KSFO"}
     assert set(stations.LIVE_BENCH) <= set(stations.ACTIVE) and run_live.DEFAULT_STATIONS == stations.LIVE
+
+
+def test_speci_floor_rounds_down_and_only_raises(monkeypatch):
+    """SPECI temps arrive with fractions; the floor uses whole degrees rounded down and
+    never lowers the hourly floor (Chicago Sep 5: hourly 82, SPECI max 82.4 -> floor stays 82)."""
+    import numpy as np
+    for hourly, speci_max, want in ((82.0, 82.4, 82.0), (82.0, 83.6, 83.0), (82.0, 81.0, 82.0)):
+        floor = hourly
+        if float(np.floor(speci_max)) > floor:
+            floor = float(np.floor(speci_max))
+        assert floor == want

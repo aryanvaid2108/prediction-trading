@@ -37,7 +37,7 @@ def fetch_asos_1min(iem_id: str, start: date, end: date, timeout: int = 90,
 
 
 def fetch_asos(iem_id: str, start: date, end: date, timeout: int = 60,
-               retries: int = 4) -> pd.DataFrame:
+               retries: int = 4, report_type: str = "3") -> pd.DataFrame:
     """Hourly ASOS temperature observations from the Iowa Environmental Mesonet.
 
     Free, no auth. Timestamps are returned in UTC (tz-naive). end is exclusive
@@ -55,7 +55,7 @@ def fetch_asos(iem_id: str, start: date, end: date, timeout: int = 60,
         "latlon": "no",
         "missing": "empty",
         "trace": "empty",
-        "report_type": "3",  # routine hourly METAR
+        "report_type": report_type,  # 3 = routine hourly METAR; "2" adds SPECI reports
     }
     last = None
     for attempt in range(retries):

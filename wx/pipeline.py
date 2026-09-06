@@ -60,6 +60,7 @@ class LiveQuote:
     calib: float         # sigma inflation applied to the prior
     intraday_active: bool
     shift_fn: object = None   # shift_fn(d) -> prob_fn with the mean moved by d° (robustness gate)
+    floor_src: str = "hourly" # which feed set the floor: hourly / speci / 1min
 
 
 def quote_live(st: Station, target: date = None, now_utc: datetime = None,
@@ -108,6 +109,19 @@ def quote_live(st: Station, target: date = None, now_utc: datetime = None,
     # gap or fetch failure degrades to the hourly floor, never below it. The
     # mixture anchor stays hourly (its residuals are trained on hourly rm).
     floor_max = observed_max
+    floor_src = "hourly"
+    # SPECI reports (same IEM feed, report_type=2) arrive in real time and catch
+    # peaks between routine hours; 6-day audit: exact-match 28% -> 32%, bias
+    # -0.23 -> -0.17F, no added overshoot with whole-degree rounding down.
+    if observed_max is not None and os.environ.get("WX_SPECI", "1") == "1":
+        try:
+            sp = obs.fetch_asos(st.iem_id, target, target + timedelta(days=1), report_type="2")
+            sp = sp[(lst_day(sp["valid"], st.std_utc_offset) == target)
+                    & (sp["valid"] <= now_naive)].dropna(subset=["tmpf"])
+            if len(sp) and float(np.floor(sp["tmpf"].max())) > floor_max:
+                floor_max, floor_src = float(np.floor(sp["tmpf"].max())), "speci"
+        except Exception as e:
+            print(f"    SPECI floor unavailable ({type(e).__name__}) — hourly floor only")
     if observed_max is not None and os.environ.get("WX_1MIN", "1") == "1":
         try:
             m1 = obs.fetch_asos_1min(st.iem_id, target, target + timedelta(days=1))
@@ -115,8 +129,8 @@ def quote_live(st: Station, target: date = None, now_utc: datetime = None,
                                     [int((now_utc + timedelta(hours=st.std_utc_offset)).hour)])
             row = p1[p1["day"] == target]
             v = row.iloc[0, 1] if len(row) else None
-            if v is not None and pd.notna(v):
-                floor_max = max(observed_max, float(v))
+            if v is not None and pd.notna(v) and float(v) > floor_max:
+                floor_max, floor_src = float(v), "1min"
         except Exception as e:
             print(f"    1-min floor unavailable ({type(e).__name__}) — hourly floor only")
 
@@ -193,7 +207,7 @@ def quote_live(st: Station, target: date = None, now_utc: datetime = None,
     mu_b, s_b = float(samples.mean()), float(samples.std())
     prob_fn = trading.sample_prob(samples)
     return LiveQuote(mu_b, s_b, prob_fn, floor_max, hour_lst, mu0, s0, calib, intraday_active=True,
-                     shift_fn=lambda d, _s=samples: trading.sample_prob(_s + d))
+                     shift_fn=lambda d, _s=samples: trading.sample_prob(_s + d), floor_src=floor_src)
 
 
 def widen_for_afd(q: LiveQuote, st: Station, target: date) -> LiveQuote:
