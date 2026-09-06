@@ -28,10 +28,10 @@ MARKET_TZ = ZoneInfo("America/New_York")
 WINDOW_ET = (10, 16)
 
 
-def paper_fill(pick, market, quote, arm, book):
+def paper_fill(pick, market, quote, arm, book, slot=None):
     """(price, count) an IOC would actually get on this book, or None."""
     m2 = trading.refresh_market(market, book)
-    pick2, _ = strategies.select([m2], quote, BANKROLL, arm)
+    pick2, _ = strategies.select([m2], quote, BANKROLL, arm, slot)
     if pick2 is None or pick2.side != pick.side:
         return None
     _, depth = trading.book_touch(book, pick.side, CROSS)
@@ -48,7 +48,7 @@ def record(ledgers, icao, target, q, ms, books, session, slot=None):
         led = ledgers[name]
         if led.has_positions(icao, key) or (slot is not None and slot not in arm.ticks):
             continue
-        pick, _ = strategies.select(ms, q, BANKROLL, arm)
+        pick, _ = strategies.select(ms, q, BANKROLL, arm, slot)
         if pick is None:
             out[name] = None
             continue
@@ -59,7 +59,7 @@ def record(ledgers, icao, target, q, ms, books, session, slot=None):
                 print(f"    {name}: orderbook {pick.ticker} failed ({type(e).__name__}) — no fill")
                 books[pick.ticker] = None
         book = books[pick.ticker]
-        got = paper_fill(pick, by[pick.ticker], q, arm, book) if book else None
+        got = paper_fill(pick, by[pick.ticker], q, arm, book, slot) if book else None
         if got is None:
             out[name] = None
             print(f"    {name}: {pick.side.upper()} {pick.ticker} @ {pick.price:.2f} did not survive the book")

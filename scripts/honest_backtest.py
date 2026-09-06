@@ -244,7 +244,7 @@ def simulate(recs, arm, ticks=None, depth=True, slip=SLIP, bankroll=BANKROLL,
                             "p_market": (m["yes_ask"] + m["yes_bid"]) / 2, "outcome": yy})
         if (r["icao"], d) in traded:
             continue
-        pick, cands = strategies.select(priced, q, bankroll, arm)
+        pick, cands = strategies.select(priced, q, bankroll, arm, slot=r["hour_utc"])
         kills += sum(not c.gated for c in cands)
         if pick is None:
             continue

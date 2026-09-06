@@ -193,3 +193,9 @@ def test_speci_floor_rounds_down_and_only_raises(monkeypatch):
         if float(np.floor(speci_max)) > floor:
             floor = float(np.floor(speci_max))
         assert floor == want
+
+
+def test_w15_arm_only_changes_the_morning_slot():
+    arm = strategies.ARMS["w15_025"]
+    assert arm.decide_kw(15)["model_weight"] == 0.25 and arm.decide_kw(17)["model_weight"] == 0.5
+    assert strategies.CONTROL.decide_kw(15)["model_weight"] == 0.5

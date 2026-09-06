@@ -35,12 +35,13 @@ class Arm:
     robust_delta: float = 1.0     # edge must survive a ±delta° mean miss; 0 = gate off (was 1.5 until Sep 4)
     toward_market: bool = True    # also shift the mean toward the book's implied mean
     ticks: tuple = SLOTS_UTC      # slots this arm may enter at
+    w15: float = None             # model weight override at the 15Z slot (the forecast-only slot)
     about: str = ""               # one plain-English line for the dashboard
 
-    def decide_kw(self) -> dict:
+    def decide_kw(self, slot=None) -> dict:
+        w = self.w15 if (slot == 15 and self.w15 is not None) else self.model_weight
         return dict(min_edge=self.min_edge, kelly_frac=self.kelly_frac,
-                    min_price=self.min_price, ratio_cap=self.ratio_cap,
-                    model_weight=self.model_weight)
+                    min_price=self.min_price, ratio_cap=self.ratio_cap, model_weight=w)
 
 
 CONTROL = Arm("control")                                  # == the live configuration
@@ -63,6 +64,9 @@ ARMS = {
                       about="Leans 75% on the market price. Fewest trades, smallest drawdown in backtest."),
     "early": Arm("early", ticks=(15, 17),
                  about="Enters only at the 11:00 and 13:00 ET ticks, never the afternoon."),
+    "w15_025": Arm("w15_025", w15=0.25,
+                   about="Trusts the model only 25% at the 11:00 ET tick, where it leans on forecasts alone; "
+                         "50% later. The only 11:00 setting positive under both backtest bounds."),
 }
 
 # What changed in the LIVE rules and why — newest first. Shown on the dashboard.
@@ -130,11 +134,11 @@ class Candidate:
         return self.worst_edge > 0
 
 
-def select(markets, quote, bankroll: float, arm: Arm):
+def select(markets, quote, bankroll: float, arm: Arm, slot=None):
     """(pick, candidates): each market's best side with its gate verdict, and the
     single highest-EV survivor (one thesis per station per day)."""
     by = {m["ticker"]: m for m in markets}
-    decisions = trading.decisions_for(markets, quote.prob_fn, bankroll, **arm.decide_kw())
+    decisions = trading.decisions_for(markets, quote.prob_fn, bankroll, **arm.decide_kw(slot))
     imp = trading.market_implied_mean(markets)
     toward = (imp - quote.mu) if (arm.toward_market and imp is not None) else None
     cands = []
