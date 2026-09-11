@@ -253,5 +253,22 @@
     "p_model": 0.996,
     "p_market": 0.45499999999999996,
     "wanted": 31
+  },
+  {
+    "ticker": "KXHIGHPHIL-26SEP11-B81.5",
+    "icao": "KPHL",
+    "target": "2026-09-11",
+    "side": "no",
+    "lo": 81.0,
+    "hi": 82.0,
+    "price": 0.36,
+    "count": 26,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.6910000000000001,
+    "p_market": 0.355,
+    "wanted": 26
   }
 ]
