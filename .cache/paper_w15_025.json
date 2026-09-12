@@ -202,5 +202,39 @@
     "p_model": 0.9390000000000001,
     "p_market": 0.43999999999999995,
     "wanted": 32
+  },
+  {
+    "ticker": "KXHIGHDEN-26SEP12-B84.5",
+    "icao": "KDEN",
+    "target": "2026-09-12",
+    "side": "yes",
+    "lo": 84.0,
+    "hi": 85.0,
+    "price": 0.23,
+    "count": 30,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.6355,
+    "p_market": 0.20500000000000002,
+    "wanted": 40
+  },
+  {
+    "ticker": "KXHIGHTOKC-26SEP12-T101",
+    "icao": "KOKC",
+    "target": "2026-09-12",
+    "side": "no",
+    "lo": 102,
+    "hi": null,
+    "price": 0.4,
+    "count": 29,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.8765000000000001,
+    "p_market": 0.3400000000000001,
+    "wanted": 32
   }
 ]
