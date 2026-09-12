@@ -610,5 +610,22 @@
     "p_model": 0.898,
     "p_market": 0.475,
     "wanted": 8
+  },
+  {
+    "ticker": "KXHIGHTSFO-26SEP12-B71.5",
+    "icao": "KSFO",
+    "target": "2026-09-12",
+    "side": "no",
+    "lo": 71.0,
+    "hi": 72.0,
+    "price": 0.4065,
+    "count": 18,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": 0.3024,
+    "p_model": 0.8714999999999999,
+    "p_market": 0.3400000000000001,
+    "wanted": 18
   }
 ]
