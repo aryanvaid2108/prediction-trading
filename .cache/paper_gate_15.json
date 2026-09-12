@@ -287,5 +287,22 @@
     "p_model": 0.8955,
     "p_market": 0.32000000000000006,
     "wanted": 42
+  },
+  {
+    "ticker": "KXHIGHAUS-26SEP12-B101.5",
+    "icao": "KAUS",
+    "target": "2026-09-12",
+    "side": "no",
+    "lo": 101.0,
+    "hi": 102.0,
+    "price": 0.35,
+    "count": 7,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.847,
+    "p_market": 0.345,
+    "wanted": 40
   }
 ]
