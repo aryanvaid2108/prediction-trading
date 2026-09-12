@@ -587,11 +587,28 @@
     "price": 0.287,
     "count": 23,
     "maker": false,
-    "realized": null,
-    "pnl": null,
+    "realized": 79.0,
+    "pnl": -6.93,
     "fee": 0.3289,
     "p_model": 0.558,
     "p_market": 0.265,
     "wanted": 23
+  },
+  {
+    "ticker": "KXHIGHDEN-26SEP12-B82.5",
+    "icao": "KDEN",
+    "target": "2026-09-12",
+    "side": "no",
+    "lo": 82.0,
+    "hi": 83.0,
+    "price": 0.4856,
+    "count": 8,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": 0.1392,
+    "p_model": 0.898,
+    "p_market": 0.475,
+    "wanted": 8
   }
 ]
