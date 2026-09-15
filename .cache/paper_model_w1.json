@@ -984,5 +984,22 @@
     "p_model": 0.7444999999999999,
     "p_market": 0.32000000000000006,
     "wanted": 42
+  },
+  {
+    "ticker": "KXHIGHCHI-26SEP15-B84.5",
+    "icao": "KMDW",
+    "target": "2026-09-15",
+    "side": "no",
+    "lo": 84.0,
+    "hi": 85.0,
+    "price": 0.43,
+    "count": 2,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.716,
+    "p_market": 0.42500000000000004,
+    "wanted": 34
   }
 ]
