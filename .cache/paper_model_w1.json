@@ -950,5 +950,39 @@
     "p_model": 0.4245,
     "p_market": 0.275,
     "wanted": 24
+  },
+  {
+    "ticker": "KXHIGHNY-26SEP15-B72.5",
+    "icao": "KNYC",
+    "target": "2026-09-15",
+    "side": "no",
+    "lo": 72.0,
+    "hi": 73.0,
+    "price": 0.2,
+    "count": 33,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.3425,
+    "p_market": 0.18500000000000005,
+    "wanted": 33
+  },
+  {
+    "ticker": "KXHIGHTLV-26SEP15-B98.5",
+    "icao": "KLAS",
+    "target": "2026-09-15",
+    "side": "no",
+    "lo": 98.0,
+    "hi": 99.0,
+    "price": 0.35,
+    "count": 42,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.7444999999999999,
+    "p_market": 0.32000000000000006,
+    "wanted": 42
   }
 ]
