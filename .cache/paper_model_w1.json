@@ -1137,5 +1137,22 @@
     "p_model": 0.625,
     "p_market": 0.35,
     "wanted": 41
+  },
+  {
+    "ticker": "KXHIGHTPHX-26SEP17-B93.5",
+    "icao": "KPHX",
+    "target": "2026-09-17",
+    "side": "no",
+    "lo": 93.0,
+    "hi": 94.0,
+    "price": 0.54,
+    "count": 27,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.9385,
+    "p_market": 0.525,
+    "wanted": 27
   }
 ]
