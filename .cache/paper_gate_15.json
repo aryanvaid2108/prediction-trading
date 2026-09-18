@@ -536,11 +536,28 @@
     "price": 0.27,
     "count": 32,
     "maker": false,
-    "realized": null,
-    "pnl": null,
+    "realized": 94.0,
+    "pnl": -9.09,
     "fee": null,
     "p_model": 0.635,
     "p_market": 0.245,
     "wanted": 32
+  },
+  {
+    "ticker": "KXHIGHLAX-26SEP18-B78.5",
+    "icao": "KLAX",
+    "target": "2026-09-18",
+    "side": "no",
+    "lo": 78.0,
+    "hi": 79.0,
+    "price": 0.47,
+    "count": 31,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.8965,
+    "p_market": 0.45999999999999996,
+    "wanted": 31
   }
 ]
