@@ -1409,5 +1409,22 @@
     "p_model": 0.4665,
     "p_market": 0.15500000000000003,
     "wanted": 37
+  },
+  {
+    "ticker": "KXHIGHNY-26SEP18-T80",
+    "icao": "KNYC",
+    "target": "2026-09-18",
+    "side": "yes",
+    "lo": null,
+    "hi": 79,
+    "price": 0.25,
+    "count": 19,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.5605,
+    "p_market": 0.24,
+    "wanted": 30
   }
 ]
