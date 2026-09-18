@@ -1426,5 +1426,22 @@
     "p_model": 0.5605,
     "p_market": 0.24,
     "wanted": 30
+  },
+  {
+    "ticker": "KXHIGHTNOLA-26SEP18-B90.5",
+    "icao": "KMSY",
+    "target": "2026-09-18",
+    "side": "no",
+    "lo": 90.0,
+    "hi": 91.0,
+    "price": 0.19,
+    "count": 15,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.6295,
+    "p_market": 0.15999999999999992,
+    "wanted": 49
   }
 ]
