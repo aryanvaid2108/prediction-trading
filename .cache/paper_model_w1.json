@@ -1341,5 +1341,22 @@
     "p_model": 0.41900000000000004,
     "p_market": 0.21999999999999997,
     "wanted": 28
+  },
+  {
+    "ticker": "KXHIGHLAX-26SEP19-B78.5",
+    "icao": "KLAX",
+    "target": "2026-09-19",
+    "side": "no",
+    "lo": 78.0,
+    "hi": 79.0,
+    "price": 0.51,
+    "count": 29,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.8705,
+    "p_market": 0.495,
+    "wanted": 29
   }
 ]
