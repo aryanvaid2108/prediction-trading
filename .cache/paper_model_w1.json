@@ -1528,5 +1528,39 @@
     "p_model": 0.9565,
     "p_market": 0.685,
     "wanted": 21
+  },
+  {
+    "ticker": "KXHIGHAUS-26SEP21-B99.5",
+    "icao": "KAUS",
+    "target": "2026-09-21",
+    "side": "no",
+    "lo": 99.0,
+    "hi": 100.0,
+    "price": 0.2,
+    "count": 3,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.393,
+    "p_market": 0.18999999999999995,
+    "wanted": 45
+  },
+  {
+    "ticker": "KXHIGHDEN-26SEP21-B74.5",
+    "icao": "KDEN",
+    "target": "2026-09-21",
+    "side": "no",
+    "lo": 74.0,
+    "hi": 75.0,
+    "price": 0.31,
+    "count": 1,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.6725,
+    "p_market": 0.30500000000000005,
+    "wanted": 48
   }
 ]
