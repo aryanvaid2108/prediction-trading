@@ -808,11 +808,28 @@
     "price": 0.3379,
     "count": 29,
     "maker": false,
-    "realized": null,
-    "pnl": null,
+    "realized": 66.0,
+    "pnl": -10.25,
     "fee": 0.4524,
     "p_model": 0.7115,
     "p_market": 0.30000000000000004,
     "wanted": 29
+  },
+  {
+    "ticker": "KXHIGHTDAL-26SEP21-B94.5",
+    "icao": "KDFW",
+    "target": "2026-09-21",
+    "side": "yes",
+    "lo": 94.0,
+    "hi": 95.0,
+    "price": 0.2411,
+    "count": 36,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": 0.4608,
+    "p_model": 0.617,
+    "p_market": 0.22,
+    "wanted": 36
   }
 ]
