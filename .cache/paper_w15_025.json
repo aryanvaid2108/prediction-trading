@@ -831,5 +831,22 @@
     "p_model": 0.6725,
     "p_market": 0.30500000000000005,
     "wanted": 31
+  },
+  {
+    "ticker": "KXHIGHTLV-26SEP22-B90.5",
+    "icao": "KLAS",
+    "target": "2026-09-22",
+    "side": "no",
+    "lo": 90.0,
+    "hi": 91.0,
+    "price": 0.38,
+    "count": 12,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.846,
+    "p_market": 0.375,
+    "wanted": 36
   }
 ]
