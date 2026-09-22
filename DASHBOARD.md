@@ -26,14 +26,14 @@ _Generated from the settings the live loop runs with._
 
 ## Paper arms
 
-_Updated 2026-09-22 15:41 UTC · bankroll $150 per arm · stations KNYC · KMDW · KAUS · KLAX · KSFO · KDEN · KPHL · KHOU · KATL · KDFW · KLAS · KMSP · KMSY · KOKC · KPHX · KSEA · fills at the live book's touch, depth-capped · no live orders placed_
+_Updated 2026-09-22 16:00 UTC · bankroll $150 per arm · stations KNYC · KMDW · KAUS · KLAX · KSFO · KDEN · KPHL · KHOU · KATL · KDFW · KLAS · KMSP · KMSY · KOKC · KPHX · KSEA · fills at the live book's touch, depth-capped · no live orders placed_
 
 | Arm | Differs from control | Realized P&L | ROI (on stake) | Win rate | Closed | Open |
 |:--|:--|---:|---:|---:|---:|---:|
 | **control** | live config — Exactly the live rules. Every other arm is judged against this one. | **$-58.79** | -13.6% | 25% | 63 | 2 |
-| **no_gate** | robust_delta=0.0 — No forecast-error check at all. Backtest's best result; takes ~3 trades a day. | **$-123.57** | -17.7% | 22% | 105 | 3 |
+| **no_gate** | robust_delta=0.0 — No forecast-error check at all. Backtest's best result; takes ~3 trades a day. | **$-123.57** | -17.7% | 22% | 105 | 4 |
 | **gate_15** | robust_delta=1.5 — The stricter 1.5°F check that was live until Sep 4. | **$-10.78** | -3.6% | 27% | 45 | 1 |
-| **model_w1** | model_weight=1.0 — Trusts the model fully, no blending with the market price. | **$-115.49** | -14.7% | 32% | 92 | 3 |
+| **model_w1** | model_weight=1.0 — Trusts the model fully, no blending with the market price. | **$-115.49** | -14.7% | 32% | 92 | 5 |
 | **model_w025** | model_weight=0.25 — Leans 75% on the market price. Fewest trades, smallest drawdown in backtest. | **$-8.88** | -17.1% | 17% | 12 | 0 |
 | **early** | ticks=(15, 17) — Enters only at the 11:00 and 13:00 ET ticks, never the afternoon. | **$+62.35** | +21.2% | 38% | 40 | 2 |
 | **w15_025** | w15=0.25 — Trusts the model only 25% at the 11:00 ET tick, where it leans on forecasts alone; 50% later. The only 11:00 setting positive under both backtest bounds. | **$-53.25** | -15.6% | 22% | 49 | 0 |
