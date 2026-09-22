@@ -848,5 +848,22 @@
     "p_model": 0.846,
     "p_market": 0.375,
     "wanted": 36
+  },
+  {
+    "ticker": "KXHIGHTDAL-26SEP22-B97.5",
+    "icao": "KDFW",
+    "target": "2026-09-22",
+    "side": "no",
+    "lo": 97.0,
+    "hi": 98.0,
+    "price": 0.51,
+    "count": 29,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.982,
+    "p_market": 0.495,
+    "wanted": 29
   }
 ]
