@@ -35,8 +35,8 @@ def main():
     tot_real = 0.0
     for p in pos:
         rp = (p.get("realized_pnl") or 0) / 100; tot_real += rp
-        print(f"  {p.get('ticker'):28} position {p.get('position'):>5}  exposure ${(p.get('market_exposure') or 0) / 100:8.2f}  "
-              f"realized ${rp:+8.2f}  fees ${(p.get('fees_paid') or 0) / 100:6.2f}  resting {p.get('resting_orders_count')}")
+        print(f"  {str(p.get('ticker')):28} position {str(p.get('position')):>5}  exposure ${(p.get('market_exposure') or 0) / 100:8.2f}  "
+              f"realized ${rp:+8.2f}  fees ${(p.get('fees_paid') or 0) / 100:6.2f}  resting {p.get('resting_orders_count') or 0}")
     print(f"KALSHI realized P&L across positions: ${tot_real:+.2f}")
 
     led = paper.Ledger(LIVE_LEDGER)
