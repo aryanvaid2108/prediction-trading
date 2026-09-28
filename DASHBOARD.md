@@ -26,17 +26,17 @@ _Generated from the settings the live loop runs with._
 
 ## Paper arms
 
-_Updated 2026-09-27 19:29 UTC · bankroll $150 per arm · stations KNYC · KMDW · KAUS · KLAX · KSFO · KDEN · KPHL · KHOU · KATL · KDFW · KLAS · KMSP · KMSY · KOKC · KPHX · KSEA · fills at the live book's touch, depth-capped · no live orders placed_
+_Updated 2026-09-28 15:57 UTC · bankroll $150 per arm · stations KNYC · KMDW · KAUS · KLAX · KSFO · KDEN · KPHL · KHOU · KATL · KDFW · KLAS · KMSP · KMSY · KOKC · KPHX · KSEA · fills at the live book's touch, depth-capped · no live orders placed_
 
 | Arm | Differs from control | Realized P&L | ROI (on stake) | Win rate | Closed | Open |
 |:--|:--|---:|---:|---:|---:|---:|
-| **control** | live config — Exactly the live rules. Every other arm is judged against this one. | **$-11.53** | -1.9% | 29% | 83 | 5 |
-| **no_gate** | robust_delta=0.0 — No forecast-error check at all. Backtest's best result; takes ~3 trades a day. | **$-90.31** | -9.6% | 25% | 134 | 7 |
-| **gate_15** | robust_delta=1.5 — The stricter 1.5°F check that was live until Sep 4. | **$-7.39** | -1.9% | 29% | 55 | 4 |
-| **model_w1** | model_weight=1.0 — Trusts the model fully, no blending with the market price. | **$-210.17** | -18.1% | 32% | 123 | 7 |
-| **model_w025** | model_weight=0.25 — Leans 75% on the market price. Fewest trades, smallest drawdown in backtest. | **$-20.36** | -32.4% | 13% | 15 | 1 |
-| **early** | ticks=(15, 17) — Enters only at the 11:00 and 13:00 ET ticks, never the afternoon. | **$+34.46** | +8.2% | 34% | 55 | 3 |
-| **w15_025** | w15=0.25 — Trusts the model only 25% at the 11:00 ET tick, where it leans on forecasts alone; 50% later. The only 11:00 setting positive under both backtest bounds. | **$-25.85** | -5.4% | 26% | 65 | 4 |
+| **control** | live config — Exactly the live rules. Every other arm is judged against this one. | **$-17.08** | -2.6% | 29% | 87 | 3 |
+| **no_gate** | robust_delta=0.0 — No forecast-error check at all. Backtest's best result; takes ~3 trades a day. | **$-66.73** | -6.9% | 25% | 136 | 8 |
+| **gate_15** | robust_delta=1.5 — The stricter 1.5°F check that was live until Sep 4. | **$+2.01** | +0.5% | 29% | 58 | 3 |
+| **model_w1** | model_weight=1.0 — Trusts the model fully, no blending with the market price. | **$-231.97** | -19.7% | 32% | 125 | 7 |
+| **model_w025** | model_weight=0.25 — Leans 75% on the market price. Fewest trades, smallest drawdown in backtest. | **$-24.73** | -36.9% | 12% | 16 | 0 |
+| **early** | ticks=(15, 17) — Enters only at the 11:00 and 13:00 ET ticks, never the afternoon. | **$+43.86** | +9.6% | 34% | 58 | 2 |
+| **w15_025** | w15=0.25 — Trusts the model only 25% at the 11:00 ET tick, where it leans on forecasts alone; 50% later. The only 11:00 setting positive under both backtest bounds. | **$-27.92** | -5.3% | 26% | 68 | 1 |
 
 ## Control arm
 
@@ -44,9 +44,9 @@ _Updated 2026-09-27 19:29 UTC · bankroll $150 per arm · stations KNYC · KMDW 
 
 | Station | Positions | Open | Closed | Realized P&L |
 |:--|--:|--:|--:|--:|
-| KATL | 13 | 1 | 12 | $+81.12 |
-| KAUS | 3 | 1 | 2 | $-9.85 |
-| KDEN | 4 | 0 | 4 | $-7.86 |
+| KATL | 14 | 1 | 13 | $+111.47 |
+| KAUS | 3 | 0 | 3 | $-16.62 |
+| KDEN | 5 | 1 | 4 | $-7.86 |
 | KDFW | 1 | 0 | 1 | $+13.70 |
 | KHOU | 5 | 0 | 5 | $-6.08 |
 | KLAS | 6 | 0 | 6 | $-13.82 |
@@ -55,39 +55,33 @@ _Updated 2026-09-27 19:29 UTC · bankroll $150 per arm · stations KNYC · KMDW 
 | KMSP | 6 | 0 | 6 | $-10.83 |
 | KMSY | 4 | 0 | 4 | $-24.84 |
 | KNYC | 4 | 0 | 4 | $-22.08 |
-| KOKC | 9 | 1 | 8 | $+28.68 |
+| KOKC | 9 | 0 | 9 | $+13.73 |
 | KPHL | 1 | 0 | 1 | $-15.55 |
 | KPHX | 4 | 1 | 3 | $+5.69 |
-| KSEA | 6 | 1 | 5 | $-6.97 |
+| KSEA | 6 | 0 | 6 | $-21.15 |
 | KSFO | 5 | 0 | 5 | $-38.70 |
 
 ### Cumulative realized P&L
 
 ```mermaid
 xychart-beta
-  x-axis ["09-05", "09-06", "09-07", "09-08", "09-09", "09-10", "09-11", "09-12", "09-13", "09-14", "09-15", "09-16", "09-17", "09-18", "09-19", "09-20", "09-21", "09-22", "09-23", "09-24", "09-25", "09-26"]
+  x-axis ["09-05", "09-06", "09-07", "09-08", "09-09", "09-10", "09-11", "09-12", "09-13", "09-14", "09-15", "09-16", "09-17", "09-18", "09-19", "09-20", "09-21", "09-22", "09-23", "09-24", "09-25", "09-26", "09-27"]
   y-axis "USD"
-  line [-12.66, -60.03, -54.88, -66.03, -30.54, -66.82, -51.90, -60.13, -90.16, -61.28, -92.62, -77.76, -108.45, -97.57, -56.11, -76.93, -58.79, -46.62, -2.62, 23.09, 33.97, -11.53]
+  line [-12.66, -60.03, -54.88, -66.03, -30.54, -66.82, -51.90, -60.13, -90.16, -61.28, -92.62, -77.76, -108.45, -97.57, -56.11, -76.93, -58.79, -46.62, -2.62, 23.09, 33.97, -11.53, -17.08]
 ```
 
 ### Open positions
 
 | Station | Settles | Bucket | Side | Price | Qty |
 |:--|:--|:--|:--|--:|--:|
-| KATL | 2026-09-27 | 82–83° | NO | $0.28 | 43 |
-| KAUS | 2026-09-27 | 98–99° | NO | $0.28 | 23 |
-| KOKC | 2026-09-27 | 93–94° | NO | $0.41 | 35 |
 | KPHX | 2026-09-27 | 97–98° | NO | $0.34 | 32 |
-| KSEA | 2026-09-27 | 65–66° | NO | $0.40 | 34 |
+| KATL | 2026-09-28 | 82–83° | NO | $0.26 | 2 |
+| KDEN | 2026-09-28 | ≤72° | NO | $0.37 | 15 |
 
 ### Recently settled
 
 | Station | Day | Bucket | Side | Settled high | P&L |
 |:--|:--|:--|:--|--:|--:|
-| KLAX | 2026-09-22 | 75–76° | YES | 77° | $-7.76 |
-| KLAS | 2026-09-22 | 90–91° | NO | 89° | $+6.23 |
-| KDFW | 2026-09-22 | 97–98° | NO | 96° | $+13.70 |
-| KDEN | 2026-09-23 | ≤75° | NO | 72° | $-13.27 |
 | KATL | 2026-09-23 | ≤79° | NO | 82° | $+20.25 |
 | KLAX | 2026-09-23 | 80–81° | NO | 78° | $+18.24 |
 | KOKC | 2026-09-23 | 91–92° | NO | 93° | $+18.78 |
@@ -104,3 +98,7 @@ xychart-beta
 | KSEA | 2026-09-26 | 63–64° | NO | 64° | $-14.64 |
 | KATL | 2026-09-26 | 81–82° | NO | 81° | $-8.24 |
 | KMSY | 2026-09-26 | 86–87° | NO | 87° | $-6.57 |
+| KATL | 2026-09-27 | 82–83° | NO | 81° | $+30.35 |
+| KAUS | 2026-09-27 | 98–99° | NO | 98° | $-6.77 |
+| KSEA | 2026-09-27 | 65–66° | NO | 65° | $-14.18 |
+| KOKC | 2026-09-27 | 93–94° | NO | 93° | $-14.95 |
