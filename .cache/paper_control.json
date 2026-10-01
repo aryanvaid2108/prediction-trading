@@ -1698,5 +1698,22 @@
     "p_model": 0.9335,
     "p_market": 0.43999999999999995,
     "wanted": 33
+  },
+  {
+    "ticker": "KXHIGHTMIN-26OCT01-B65.5",
+    "icao": "KMSP",
+    "target": "2026-10-01",
+    "side": "no",
+    "lo": 65.0,
+    "hi": 66.0,
+    "price": 0.2,
+    "count": 27,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.4485,
+    "p_market": 0.18500000000000005,
+    "wanted": 27
   }
 ]
