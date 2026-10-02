@@ -2667,5 +2667,39 @@
     "p_model": 0.4485,
     "p_market": 0.18500000000000005,
     "wanted": 58
+  },
+  {
+    "ticker": "KXHIGHTSFO-26OCT02-T77",
+    "icao": "KSFO",
+    "target": "2026-10-02",
+    "side": "no",
+    "lo": null,
+    "hi": 76,
+    "price": 0.39,
+    "count": 5,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.808,
+    "p_market": 0.385,
+    "wanted": 38
+  },
+  {
+    "ticker": "KXHIGHTMIN-26OCT02-B64.5",
+    "icao": "KMSP",
+    "target": "2026-10-02",
+    "side": "no",
+    "lo": 64.0,
+    "hi": 65.0,
+    "price": 0.45,
+    "count": 33,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.9085,
+    "p_market": 0.42999999999999994,
+    "wanted": 33
   }
 ]
