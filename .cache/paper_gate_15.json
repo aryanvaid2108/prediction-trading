@@ -1137,5 +1137,22 @@
     "p_model": 0.5385,
     "p_market": 0.17999999999999994,
     "wanted": 41
+  },
+  {
+    "ticker": "KXHIGHDEN-26OCT03-B83.5",
+    "icao": "KDEN",
+    "target": "2026-10-03",
+    "side": "no",
+    "lo": 83.0,
+    "hi": 84.0,
+    "price": 0.31,
+    "count": 15,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.591,
+    "p_market": 0.30000000000000004,
+    "wanted": 23
   }
 ]
