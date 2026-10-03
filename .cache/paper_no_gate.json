@@ -3058,5 +3058,22 @@
     "p_model": 0.6245,
     "p_market": 0.30500000000000005,
     "wanted": 27
+  },
+  {
+    "ticker": "KXHIGHTATL-26OCT03-B86.5",
+    "icao": "KATL",
+    "target": "2026-10-03",
+    "side": "no",
+    "lo": 86.0,
+    "hi": 87.0,
+    "price": 0.46,
+    "count": 11,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.9675,
+    "p_market": 0.45499999999999996,
+    "wanted": 32
   }
 ]
