@@ -2055,5 +2055,39 @@
     "p_model": 0.708,
     "p_market": 0.33999999999999997,
     "wanted": 26
+  },
+  {
+    "ticker": "KXHIGHTATL-26OCT07-B79.5",
+    "icao": "KATL",
+    "target": "2026-10-07",
+    "side": "no",
+    "lo": 79.0,
+    "hi": 80.0,
+    "price": 0.2,
+    "count": 5,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.5065,
+    "p_market": 0.18500000000000005,
+    "wanted": 34
+  },
+  {
+    "ticker": "KXHIGHTOKC-26OCT07-B91.5",
+    "icao": "KOKC",
+    "target": "2026-10-07",
+    "side": "no",
+    "lo": 91.0,
+    "hi": 92.0,
+    "price": 0.3,
+    "count": 33,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.759,
+    "p_market": 0.28,
+    "wanted": 39
   }
 ]
