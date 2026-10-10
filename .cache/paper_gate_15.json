@@ -1307,5 +1307,22 @@
     "p_model": 0.5205,
     "p_market": 0.25,
     "wanted": 21
+  },
+  {
+    "ticker": "KXHIGHTOKC-26OCT10-B90.5",
+    "icao": "KOKC",
+    "target": "2026-10-10",
+    "side": "no",
+    "lo": 90.0,
+    "hi": 91.0,
+    "price": 0.3,
+    "count": 28,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.6585,
+    "p_market": 0.29500000000000004,
+    "wanted": 31
   }
 ]
