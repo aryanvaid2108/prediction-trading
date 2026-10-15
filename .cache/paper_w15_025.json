@@ -1800,5 +1800,39 @@
     "p_model": 0.8745,
     "p_market": 0.195,
     "wanted": 35
+  },
+  {
+    "ticker": "KXHIGHTSFO-26OCT15-T85",
+    "icao": "KSFO",
+    "target": "2026-10-15",
+    "side": "no",
+    "lo": 86,
+    "hi": null,
+    "price": 0.52,
+    "count": 28,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.962,
+    "p_market": 0.495,
+    "wanted": 28
+  },
+  {
+    "ticker": "KXHIGHTSEA-26OCT15-T68",
+    "icao": "KSEA",
+    "target": "2026-10-15",
+    "side": "yes",
+    "lo": null,
+    "hi": 67,
+    "price": 0.15,
+    "count": 30,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.3615,
+    "p_market": 0.14500000000000002,
+    "wanted": 30
   }
 ]
