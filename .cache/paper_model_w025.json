@@ -491,5 +491,39 @@
     "p_model": 0.8745,
     "p_market": 0.195,
     "wanted": 35
+  },
+  {
+    "ticker": "KXHIGHCHI-26OCT18-B63.5",
+    "icao": "KMDW",
+    "target": "2026-10-18",
+    "side": "no",
+    "lo": 63.0,
+    "hi": 64.0,
+    "price": 0.28,
+    "count": 29,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.9325,
+    "p_market": 0.275,
+    "wanted": 29
+  },
+  {
+    "ticker": "KXHIGHDEN-26OCT18-B72.5",
+    "icao": "KDEN",
+    "target": "2026-10-18",
+    "side": "yes",
+    "lo": 72.0,
+    "hi": 73.0,
+    "price": 0.17,
+    "count": 3,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.533,
+    "p_market": 0.165,
+    "wanted": 23
   }
 ]
