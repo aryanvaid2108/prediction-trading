@@ -3347,5 +3347,39 @@
     "p_model": 0.7625,
     "p_market": 0.33999999999999997,
     "wanted": 42
+  },
+  {
+    "ticker": "KXHIGHAUS-26OCT19-B80.5",
+    "icao": "KAUS",
+    "target": "2026-10-19",
+    "side": "no",
+    "lo": 80.0,
+    "hi": 81.0,
+    "price": 0.53,
+    "count": 28,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.9845,
+    "p_market": 0.52,
+    "wanted": 28
+  },
+  {
+    "ticker": "KXHIGHTSEA-26OCT19-B61.5",
+    "icao": "KSEA",
+    "target": "2026-10-19",
+    "side": "no",
+    "lo": 61.0,
+    "hi": 62.0,
+    "price": 0.36,
+    "count": 27,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.5305,
+    "p_market": 0.355,
+    "wanted": 27
   }
 ]
