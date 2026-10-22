@@ -2565,5 +2565,22 @@
     "p_model": 0.977,
     "p_market": 0.48,
     "wanted": 30
+  },
+  {
+    "ticker": "KXHIGHTSEA-26OCT22-B60.5",
+    "icao": "KSEA",
+    "target": "2026-10-22",
+    "side": "no",
+    "lo": 60.0,
+    "hi": 61.0,
+    "price": 0.36,
+    "count": 8,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.727,
+    "p_market": 0.355,
+    "wanted": 29
   }
 ]
