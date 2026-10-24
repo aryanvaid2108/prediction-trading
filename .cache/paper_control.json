@@ -2616,5 +2616,39 @@
     "p_model": 0.5665,
     "p_market": 0.22499999999999998,
     "wanted": 32
+  },
+  {
+    "ticker": "KXHIGHTDAL-26OCT24-B84.5",
+    "icao": "KDFW",
+    "target": "2026-10-24",
+    "side": "no",
+    "lo": 84.0,
+    "hi": 85.0,
+    "price": 0.29,
+    "count": 12,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.6505000000000001,
+    "p_market": 0.26,
+    "wanted": 30
+  },
+  {
+    "ticker": "KXHIGHTOKC-26OCT24-B81.5",
+    "icao": "KOKC",
+    "target": "2026-10-24",
+    "side": "no",
+    "lo": 81.0,
+    "hi": 82.0,
+    "price": 0.46,
+    "count": 28,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.887,
+    "p_market": 0.42999999999999994,
+    "wanted": 29
   }
 ]
