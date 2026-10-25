@@ -3619,5 +3619,22 @@
     "p_model": 0.887,
     "p_market": 0.42999999999999994,
     "wanted": 32
+  },
+  {
+    "ticker": "KXHIGHTHOU-26OCT25-B81.5",
+    "icao": "KHOU",
+    "target": "2026-10-25",
+    "side": "no",
+    "lo": 81.0,
+    "hi": 82.0,
+    "price": 0.2,
+    "count": 22,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.33699999999999997,
+    "p_market": 0.16500000000000004,
+    "wanted": 32
   }
 ]
