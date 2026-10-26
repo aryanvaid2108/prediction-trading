@@ -1732,5 +1732,22 @@
     "p_model": 0.804,
     "p_market": 0.30499999999999994,
     "wanted": 8
+  },
+  {
+    "ticker": "KXHIGHCHI-26OCT26-B64.5",
+    "icao": "KMDW",
+    "target": "2026-10-26",
+    "side": "no",
+    "lo": 64.0,
+    "hi": 65.0,
+    "price": 0.36,
+    "count": 21,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": 0.3381,
+    "p_model": 0.844,
+    "p_market": 0.35,
+    "wanted": 21
   }
 ]
