@@ -1760,11 +1760,28 @@
     "price": 0.1814,
     "count": 20,
     "maker": false,
-    "realized": null,
-    "pnl": null,
+    "realized": 83.0,
+    "pnl": 16.17,
     "fee": 0.206,
     "p_model": 0.673,
     "p_market": 0.17500000000000004,
     "wanted": 20
+  },
+  {
+    "ticker": "KXHIGHTMIN-26OCT29-T56",
+    "icao": "KMSP",
+    "target": "2026-10-29",
+    "side": "yes",
+    "lo": null,
+    "hi": 55,
+    "price": 0.2581,
+    "count": 32,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": 0.4288,
+    "p_model": 0.721,
+    "p_market": 0.24,
+    "wanted": 32
   }
 ]
