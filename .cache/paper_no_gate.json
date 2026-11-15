@@ -4486,5 +4486,39 @@
     "p_model": 0.9339999999999999,
     "p_market": 0.42999999999999994,
     "wanted": 34
+  },
+  {
+    "ticker": "KXHIGHCHI-26NOV15-B52.5",
+    "icao": "KMDW",
+    "target": "2026-11-15",
+    "side": "no",
+    "lo": 52.0,
+    "hi": 53.0,
+    "price": 0.39,
+    "count": 12,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.827,
+    "p_market": 0.38,
+    "wanted": 33
+  },
+  {
+    "ticker": "KXHIGHTMIN-26NOV15-B50.5",
+    "icao": "KMSP",
+    "target": "2026-11-15",
+    "side": "no",
+    "lo": 50.0,
+    "hi": 51.0,
+    "price": 0.46,
+    "count": 25,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.829,
+    "p_market": 0.45499999999999996,
+    "wanted": 27
   }
 ]
