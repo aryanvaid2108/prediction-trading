@@ -1715,5 +1715,39 @@
     "p_model": 0.46699999999999997,
     "p_market": 0.17000000000000004,
     "wanted": 35
+  },
+  {
+    "ticker": "KXHIGHAUS-26NOV17-B68.5",
+    "icao": "KAUS",
+    "target": "2026-11-17",
+    "side": "no",
+    "lo": 68.0,
+    "hi": 69.0,
+    "price": 0.51,
+    "count": 29,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.982,
+    "p_market": 0.47,
+    "wanted": 29
+  },
+  {
+    "ticker": "KXHIGHTOKC-26NOV17-B60.5",
+    "icao": "KOKC",
+    "target": "2026-11-17",
+    "side": "no",
+    "lo": 60.0,
+    "hi": 61.0,
+    "price": 0.42,
+    "count": 16,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.971,
+    "p_market": 0.375,
+    "wanted": 35
   }
 ]
