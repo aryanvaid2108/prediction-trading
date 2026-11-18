@@ -1749,5 +1749,39 @@
     "p_model": 0.971,
     "p_market": 0.375,
     "wanted": 35
+  },
+  {
+    "ticker": "KXHIGHLAX-26NOV18-B68.5",
+    "icao": "KLAX",
+    "target": "2026-11-18",
+    "side": "no",
+    "lo": 68.0,
+    "hi": 69.0,
+    "price": 0.19,
+    "count": 18,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.4175,
+    "p_market": 0.18500000000000005,
+    "wanted": 27
+  },
+  {
+    "ticker": "KXHIGHTLV-26NOV18-B61.5",
+    "icao": "KLAS",
+    "target": "2026-11-18",
+    "side": "no",
+    "lo": 61.0,
+    "hi": 62.0,
+    "price": 0.34,
+    "count": 25,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.6799999999999999,
+    "p_market": 0.30000000000000004,
+    "wanted": 25
   }
 ]
