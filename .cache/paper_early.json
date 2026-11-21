@@ -2038,5 +2038,39 @@
     "p_model": 0.829,
     "p_market": 0.45499999999999996,
     "wanted": 27
+  },
+  {
+    "ticker": "KXHIGHCHI-26NOV21-B70.5",
+    "icao": "KMDW",
+    "target": "2026-11-21",
+    "side": "no",
+    "lo": 70.0,
+    "hi": 71.0,
+    "price": 0.52,
+    "count": 28,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.988,
+    "p_market": 0.515,
+    "wanted": 28
+  },
+  {
+    "ticker": "KXHIGHAUS-26NOV21-T74",
+    "icao": "KAUS",
+    "target": "2026-11-21",
+    "side": "yes",
+    "lo": null,
+    "hi": 73,
+    "price": 0.4,
+    "count": 31,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": null,
+    "p_model": 0.83,
+    "p_market": 0.375,
+    "wanted": 31
   }
 ]
