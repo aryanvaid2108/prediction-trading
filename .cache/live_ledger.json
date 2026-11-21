@@ -1970,5 +1970,22 @@
     "p_model": 0.785,
     "p_market": 0.275,
     "wanted": 38
+  },
+  {
+    "ticker": "KXHIGHCHI-26NOV21-B70.5",
+    "icao": "KMDW",
+    "target": "2026-11-21",
+    "side": "no",
+    "lo": 70.0,
+    "hi": 71.0,
+    "price": 0.52,
+    "count": 28,
+    "maker": false,
+    "realized": null,
+    "pnl": null,
+    "fee": 0.4872,
+    "p_model": 0.9665,
+    "p_market": 0.5,
+    "wanted": 28
   }
 ]
